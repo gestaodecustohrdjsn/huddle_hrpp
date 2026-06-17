@@ -3,6 +3,7 @@
   --turquesa: #0097B2;
   --turquesa-claro: rgba(92, 225, 230, 0.15);
   --cinza: #f3f5f7;
+  --cinza-borda: #d9dee5;
   --texto: #1f2933;
   --erro: #d9534f;
   --verde: #28a745;
@@ -22,7 +23,7 @@ body {
 
 .container {
   width: 100%;
-  max-width: 920px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 35px 25px;
 }
@@ -62,15 +63,22 @@ input,
 textarea {
   width: 100%;
   padding: 16px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--cinza-borda);
   border-radius: 12px;
   font-size: 1.1rem;
-  margin-bottom: 18px;
+  margin: 8px 0 18px;
+  font-family: Arial, sans-serif;
 }
 
 textarea {
   min-height: 110px;
   resize: vertical;
+}
+
+label {
+  display: block;
+  font-weight: 700;
+  margin-top: 10px;
 }
 
 .grid-botoes {
@@ -87,6 +95,14 @@ button {
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s ease;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+textarea:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .grid-botoes button {
@@ -141,9 +157,17 @@ button {
   border-color: var(--azul);
 }
 
-.bloco-detalhe {
-  background: var(--cinza);
-  border-left: 5px solid var(--turquesa);
+.bloco-observacao {
+  background: #f8fafc;
+  border-left: 5px solid #b8dce3;
+  padding: 18px;
+  border-radius: 12px;
+  margin-top: 18px;
+}
+
+.bloco-pendencia {
+  background: #fff7ed;
+  border-left: 5px solid #f59e0b;
   padding: 18px;
   border-radius: 12px;
   margin-top: 18px;
@@ -167,10 +191,44 @@ button {
   color: var(--turquesa);
 }
 
-.erro-campo {
-  color: var(--erro);
+.loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading.hidden {
+  display: none;
+}
+
+.loading-card {
+  background: white;
+  padding: 30px 45px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+  text-align: center;
+  color: var(--azul);
   font-weight: bold;
-  margin-bottom: 12px;
+}
+
+.spinner {
+  width: 42px;
+  height: 42px;
+  border: 5px solid #ddd;
+  border-top-color: var(--turquesa);
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes aparecer {
