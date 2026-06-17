@@ -21,3 +21,106 @@ const listaPerguntas =
 document.getElementById("lista-perguntas");
 
 carregarHuddles();
+
+
+async function carregarHuddles(){
+
+  const resposta =
+  await fetch(
+    API + "?action=huddles"
+  );
+
+  const huddles =
+  await resposta.json();
+
+  listaHuddles.innerHTML = "";
+
+  huddles.forEach(huddle => {
+
+    const btn =
+    document.createElement("button");
+
+    btn.innerText =
+    huddle.nome_huddle;
+
+    btn.onclick = () =>
+      carregarSetores(
+        huddle.id_huddle
+      );
+
+    listaHuddles.appendChild(btn);
+
+  });
+
+}
+
+
+async function carregarSetores(idHuddle){
+
+  telaSetor.classList.remove("hidden");
+
+  const resposta =
+  await fetch(
+    API +
+    "?action=setores&id_huddle=" +
+    idHuddle
+  );
+
+  const setores =
+  await resposta.json();
+
+  listaSetores.innerHTML = "";
+
+  setores.forEach(setor => {
+
+    const btn =
+    document.createElement("button");
+
+    btn.innerText =
+    setor.nome_setor;
+
+    btn.onclick = () =>
+      carregarPerguntas(
+        setor.id_setor
+      );
+
+    listaSetores.appendChild(btn);
+
+  });
+
+}
+
+async function carregarPerguntas(idSetor){
+
+  telaPerguntas.classList.remove("hidden");
+
+  const resposta =
+  await fetch(
+    API +
+    "?action=perguntas&id_setor=" +
+    idSetor
+  );
+
+  const perguntas =
+  await resposta.json();
+
+  listaPerguntas.innerHTML = "";
+
+  perguntas.forEach(p => {
+
+    const div =
+    document.createElement("div");
+
+    div.innerHTML = `
+      <p>
+        ${p.ordem} - ${p.pergunta}
+      </p>
+    `;
+
+    listaPerguntas.appendChild(div);
+
+  });
+
+}
+
+
