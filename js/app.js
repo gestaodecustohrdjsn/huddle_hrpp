@@ -1,5 +1,7 @@
 const API =
-  "https://script.google.com/macros/s/AKfycbx9_lyTqriYZYmgsVTxDfFFV_qPAgp_9mhxTaWlYm7nkW6hFN-dMnnb_DRcZED2JNgzjw/exec";
+  "https://script.google.com/macros/s/AKfycbxDO0C6JA71KBdPs1VvMTs8oxd0fLBnOFWSqI14SAM46OSWSdP-Ld6BaJsPI2AQwlFILw/exec";
+
+const CHAVE_SESSAO_ATIVA = "huddle_hrpp_sessao_ativa";
 
 const estado = {
   usuario: null,
@@ -22,7 +24,11 @@ document.addEventListener("DOMContentLoaded", iniciar);
 async function iniciar() {
   try {
     mostrarTela("tela-login");
+
     await executarComLoading("Carregando usuários...", carregarUsuarios);
+
+    await tentarRetomarSessao();
+
   } catch (erro) {
     mostrarErro("Erro ao iniciar o sistema: " + erro.message);
   }
@@ -92,6 +98,126 @@ async function apiGet(parametros) {
   }
 
   return await resposta.json();
+}
+
+function esperar(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/* =========================
+   SESSÃO LOCAL
+========================= */
+
+function salvarSessaoLocal() {
+  if (!estado.usuario || !estado.huddle || !estado.sessao) return;
+
+  const dados = {
+    usuario: estado.usuario,
+    huddle: estado.huddle,
+    sessao: estado.sessao,
+    salvo_em: new Date().toISOString()
+  };
+
+  localStorage.setItem(CHAVE_SESSAO_ATIVA, JSON.stringify(dados));
+}
+
+function obterSessaoLocal() {
+  try {
+    const texto = localStorage.getItem(CHAVE_SESSAO_ATIVA);
+
+    if (!texto) return null;
+
+    return JSON.parse(texto);
+
+  } catch (erro) {
+    localStorage.removeItem(CHAVE_SESSAO_ATIVA);
+    return null;
+  }
+}
+
+function limparSessaoLocal() {
+  localStorage.removeItem(CHAVE_SESSAO_ATIVA);
+}
+
+async function tentarRetomarSessao() {
+  const sessaoSalva = obterSessaoLocal();
+
+  if (!sessaoSalva) return false;
+
+  const textoConfirmacao =
+    `Existe uma sessão de Huddle em andamento:\n\n` +
+    `Huddle: ${sessaoSalva.huddle?.nome_huddle || ""}\n` +
+    `Sessão: ${sessaoSalva.sessao?.id_sessao || ""}\n\n` +
+    `Deseja retomar essa sessão?`;
+
+  const desejaRetomar = confirm(textoConfirmacao);
+
+  if (!desejaRetomar) {
+    limparSessaoLocal();
+    return false;
+  }
+
+  let retomou = false;
+
+  await executarComLoading("Retomando sessão...", async () => {
+    const statusSessao = await apiGet({
+      action: "buscarSessao",
+      id_sessao: sessaoSalva.sessao.id_sessao
+    });
+
+    if (!statusSessao.sucesso) {
+      limparSessaoLocal();
+      alert("Não foi possível retomar a sessão salva.");
+      return;
+    }
+
+    if (String(statusSessao.status || "").toUpperCase() === "FINALIZADO") {
+      limparSessaoLocal();
+      alert("Essa sessão já foi finalizada.");
+      return;
+    }
+
+    estado.usuario = sessaoSalva.usuario;
+    estado.huddle = sessaoSalva.huddle;
+    estado.sessao = {
+      ...sessaoSalva.sessao,
+      ...statusSessao
+    };
+
+    estado.setor = null;
+    estado.perguntas = [];
+    estado.respostas = [];
+    estado.indice = 0;
+
+    $("info-usuario").innerText =
+      `${estado.usuario.nome} | ${estado.usuario.cargo}`;
+
+    $("info-usuario-setor").innerText =
+      `${estado.usuario.nome} | ${estado.usuario.cargo}`;
+
+    await carregarSetores(estado.huddle.id_huddle);
+    await sincronizarSetoresRespondidos();
+
+    mostrarTelaSetores();
+
+    retomou = true;
+  });
+
+  return retomou;
+}
+
+async function sincronizarSetoresRespondidos() {
+  if (!estado.sessao || !estado.sessao.id_sessao) return;
+
+  const retorno = await apiGet({
+    action: "setoresRespondidos",
+    id_sessao: estado.sessao.id_sessao
+  });
+
+  if (retorno.sucesso && Array.isArray(retorno.setores)) {
+    estado.setoresRespondidos =
+      new Set(retorno.setores.map(id => String(id)));
+  }
 }
 
 /* =========================
@@ -189,7 +315,10 @@ async function selecionarHuddle(huddle) {
 
     estado.sessao = sessao;
 
+    salvarSessaoLocal();
+
     await carregarSetores(huddle.id_huddle);
+    await sincronizarSetoresRespondidos();
 
     mostrarTelaSetores();
   });
@@ -199,7 +328,7 @@ function voltarParaHuddles() {
   if (carregando) return;
 
   const confirmar = confirm(
-    "Deseja trocar o Huddle? A sessão atual não será finalizada."
+    "Deseja trocar o Huddle? A sessão atual continuará salva como Em Andamento."
   );
 
   if (!confirmar) return;
@@ -275,7 +404,10 @@ function renderizarSetores() {
 async function selecionarSetor(setor) {
   if (carregando) return;
 
+  await sincronizarSetoresRespondidos();
+
   if (estado.setoresRespondidos.has(String(setor.id_setor))) {
+    renderizarSetores();
     return;
   }
 
@@ -579,6 +711,8 @@ function voltarPergunta() {
 async function finalizarSetor() {
   if (carregando) return;
 
+  const idSetorFinalizado = String(estado.setor.id_setor);
+
   const payload = {
     action: "salvarSetor",
     id_sessao: estado.sessao.id_sessao,
@@ -600,18 +734,31 @@ async function finalizarSetor() {
         mode: "no-cors"
       });
 
-      estado.setoresRespondidos.add(String(estado.setor.id_setor));
+      await esperar(1200);
+
+      try {
+        await sincronizarSetoresRespondidos();
+      } catch (erro) {
+        estado.setoresRespondidos.add(idSetorFinalizado);
+      }
+
+      if (!estado.setoresRespondidos.has(idSetorFinalizado)) {
+        estado.setoresRespondidos.add(idSetorFinalizado);
+      }
+
       estado.setor = null;
       estado.perguntas = [];
       estado.respostas = [];
       estado.indice = 0;
+
+      salvarSessaoLocal();
 
       mostrarTelaSetores();
 
     } catch (erro) {
       salvarOffline(payload);
 
-      estado.setoresRespondidos.add(String(estado.setor.id_setor));
+      estado.setoresRespondidos.add(idSetorFinalizado);
       mostrarTelaSetores();
     }
   });
@@ -628,15 +775,47 @@ async function finalizarSessao() {
 
   if (!confirmar) return;
 
-  await executarComLoading("Finalizando Huddle...", async () => {
-    await apiGet({
-      action: "finalizarSessao",
-      id_sessao: estado.sessao.id_sessao
+  try {
+    await executarComLoading("Finalizando Huddle...", async () => {
+      await sincronizarSetoresRespondidos();
+
+      const total = estado.setores.length;
+      const respondidos = estado.setoresRespondidos.size;
+
+      if (respondidos < total) {
+        renderizarSetores();
+        throw new Error("Ainda existem setores aguardando resposta.");
+      }
+
+      const retorno = await apiGet({
+        action: "finalizarSessao",
+        id_sessao: estado.sessao.id_sessao
+      });
+
+      if (!retorno.sucesso) {
+        await sincronizarSetoresRespondidos();
+        renderizarSetores();
+        throw new Error(retorno.erro || "Não foi possível finalizar o Huddle.");
+      }
+
+      limparSessaoLocal();
+
+      estado.sessao = null;
+      estado.setor = null;
+      estado.perguntas = [];
+      estado.respostas = [];
+
+      mostrarTela("tela-final");
     });
 
-    mostrarTela("tela-final");
-  });
+  } catch (erro) {
+    alert(erro.message);
+  }
 }
+
+/* =========================
+   OFFLINE
+========================= */
 
 function salvarOffline(payload) {
   const fila =
@@ -650,8 +829,14 @@ function salvarOffline(payload) {
   );
 }
 
+/* =========================
+   REINICIAR
+========================= */
+
 function reiniciar() {
   if (carregando) return;
+
+  limparSessaoLocal();
 
   estado.huddle = null;
   estado.sessao = null;
