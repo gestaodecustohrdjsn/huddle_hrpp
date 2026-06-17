@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,37 +11,88 @@
 
 <body>
 
-  <div class="container">
+  <main class="container">
 
-    <h1>HUDDLE HRPP</h1>
+    <header class="header">
+      <h1>HUDDLE HRPP</h1>
+      <p id="subtitulo">Sistema de Registro de Huddles Hospitalares</p>
+    </header>
 
-    <div id="tela-huddle">
+    <!-- LOGIN -->
+    <section id="tela-login" class="tela">
+      <h2>Quem está realizando o Huddle?</h2>
 
+      <select id="select-usuario">
+        <option value="">Carregando usuários...</option>
+      </select>
+
+      <button class="btn-principal" onclick="confirmarUsuario()">
+        Continuar
+      </button>
+    </section>
+
+    <!-- HUDDLE -->
+    <section id="tela-huddle" class="tela hidden">
       <h2>Selecione o Huddle</h2>
+      <div id="lista-huddles" class="grid-botoes"></div>
+    </section>
 
-      <div id="lista-huddles"></div>
-
-    </div>
-
-    <div id="tela-setor" class="hidden">
-
+    <!-- SETOR -->
+    <section id="tela-setor" class="tela hidden">
       <h2>Selecione o Setor</h2>
+      <div id="lista-setores" class="grid-botoes"></div>
+    </section>
 
-      <div id="lista-setores"></div>
+    <!-- PERGUNTA -->
+    <section id="tela-pergunta" class="tela hidden">
 
-    </div>
+      <div class="barra-info">
+        <span id="info-usuario"></span>
+        <span id="info-contexto"></span>
+      </div>
 
-    <div id="tela-perguntas" class="hidden">
+      <div class="progresso">
+        <span id="contador-pergunta"></span>
+      </div>
 
-      <h2>Perguntas</h2>
+      <h2 id="texto-pergunta"></h2>
 
-      <div id="lista-perguntas"></div>
+      <div id="area-resposta"></div>
 
-    </div>
+      <div class="acoes">
+        <button class="btn-secundario" onclick="voltarPergunta()">
+          Voltar
+        </button>
 
-  </div>
+        <button class="btn-principal" onclick="continuarPergunta()">
+          Continuar
+        </button>
+      </div>
+
+    </section>
+
+    <!-- FINAL -->
+    <section id="tela-final" class="tela hidden">
+      <h2>Huddle registrado com sucesso!</h2>
+      <p>As respostas foram enviadas para a planilha.</p>
+
+      <button class="btn-principal" onclick="reiniciar()">
+        Registrar novo Huddle
+      </button>
+    </section>
+
+    <!-- ERRO -->
+    <section id="tela-erro" class="tela hidden">
+      <h2>Algo deu errado</h2>
+      <p id="mensagem-erro"></p>
+
+      <button class="btn-principal" onclick="location.reload()">
+        Recarregar
+      </button>
+    </section>
+
+  </main>
 
   <script src="js/app.js"></script>
-
 </body>
 </html>
