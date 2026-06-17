@@ -260,3 +260,62 @@ textarea:disabled {
     flex-direction: column;
   }
 }
+
+.texto-apoio {
+  color: #666;
+  margin-top: -12px;
+  margin-bottom: 24px;
+}
+
+.grid-setores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.card-setor {
+  background: var(--turquesa-claro);
+  color: #111;
+  min-height: 92px;
+  border-radius: 14px;
+  padding: 16px;
+  border: 2px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.card-setor:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 151, 178, 0.2);
+}
+
+.card-setor.respondido {
+  background: #ecfdf3;
+  border-color: #28a745;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.card-setor h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.tag-status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tag-aguardando {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.tag-respondido {
+  background: #d4edda;
+  color: #155724;
+}
