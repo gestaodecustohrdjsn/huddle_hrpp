@@ -1,1 +1,21 @@
 
+body{
+  font-family: Arial, sans-serif;
+  margin:0;
+  padding:30px;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+}
+
+.hidden{
+  display:none;
+}
+
+button{
+  padding:15px;
+  margin:8px;
+  cursor:pointer;
+}
