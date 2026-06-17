@@ -1,6 +1,6 @@
 
 const API =
-"https://script.google.com/macros/s/AKfycbzK5alad7lCUe3lK913lCfgH7C8DlP1_7URg-l6VW_4kdgIWVkj3DRAxpGIjU0bVt9nig/exec";
+"https://script.google.com/macros/s/AKfycbzK5alad7lCUe3lK913lCfgH7C8DlP1_7URg-l6VW_4kdgIWVkj3DRAxpGIjU0bVt9nig";
 
 const telaHuddle =
 document.getElementById("tela-huddle");
