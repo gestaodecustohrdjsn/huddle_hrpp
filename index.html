@@ -14,8 +14,22 @@
   <main class="container">
 
     <header class="header">
-      <h1>HUDDLE HRPP</h1>
-      <p>Sistema de Registro de Huddles Hospitalares</p>
+
+      <div class="header-icons">
+        <img src="images/Icon_Hospital.png" alt="Ícone Hospital">
+        <img src="images/Icon_Empresa.png" alt="Ícone Empresa">
+      </div>
+
+      <div class="header-logos">
+        <img src="images/Logo_Hospital.png" alt="Logo Hospital">
+        <img src="images/Logo_Empresa.png" alt="Logo Empresa">
+      </div>
+
+      <div class="header-titulo">
+        <h1>HUDDLE HRPP</h1>
+        <p>Sistema de Registro de Huddles Hospitalares</p>
+      </div>
+
     </header>
 
     <!-- LOGIN -->
@@ -46,10 +60,10 @@
 
       <h2>Setores do Huddle</h2>
       <p class="texto-apoio">
-        Selecione um setor para responder. Setores já respondidos ficam bloqueados para evitar duplicidade.
+        Selecione um setor para responder. Setores já respondidos ficam marcados para evitar duplicidade.
       </p>
 
-      <div id="lista-setores" class="grid-setores"></div>
+      <div id="lista-setores" class="lista-setores"></div>
 
       <div class="acoes">
         <button class="btn-secundario" onclick="voltarParaHuddles()">
