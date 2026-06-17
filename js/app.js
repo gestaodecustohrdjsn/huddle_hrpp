@@ -1,10 +1,13 @@
 const API =
-  "https://script.google.com/macros/s/AKfycbzHbLxUDw8zJFhb5feWAqdjB8c14lBbHtjugMG9VbtP8wkW1RxB-XG-YI-kNUyIeOWH5Q/exec";
+  "https://script.google.com/macros/s/AKfycbx9_lyTqriYZYmgsVTxDfFFV_qPAgp_9mhxTaWlYm7nkW6hFN-dMnnb_DRcZED2JNgzjw/exec";
 
 const estado = {
   usuario: null,
   huddle: null,
+  sessao: null,
   setor: null,
+  setores: [],
+  setoresRespondidos: new Set(),
   perguntas: [],
   indice: 0,
   respostas: []
@@ -126,6 +129,9 @@ async function confirmarUsuario() {
   $("info-usuario").innerText =
     `${estado.usuario.nome} | ${estado.usuario.cargo}`;
 
+  $("info-usuario-setor").innerText =
+    `${estado.usuario.nome} | ${estado.usuario.cargo}`;
+
   await executarComLoading("Carregando Huddles...", carregarHuddles);
 }
 
@@ -136,9 +142,13 @@ async function confirmarUsuario() {
 async function carregarHuddles() {
   mostrarTela("tela-huddle");
 
-  $("lista-huddles").innerHTML = "";
-  $("lista-setores").innerHTML = "";
-  $("area-resposta").innerHTML = "";
+  estado.huddle = null;
+  estado.sessao = null;
+  estado.setor = null;
+  estado.setores = [];
+  estado.setoresRespondidos = new Set();
+  estado.perguntas = [];
+  estado.respostas = [];
 
   const huddles = await apiGet({ action: "huddles" });
 
@@ -159,19 +169,42 @@ async function carregarHuddles() {
 async function selecionarHuddle(huddle) {
   if (carregando) return;
 
-  estado.huddle = huddle;
-  estado.setor = null;
-  estado.perguntas = [];
-  estado.respostas = [];
-  estado.indice = 0;
+  await executarComLoading("Abrindo sessão do Huddle...", async () => {
+    estado.huddle = huddle;
+    estado.setor = null;
+    estado.perguntas = [];
+    estado.respostas = [];
+    estado.indice = 0;
+    estado.setoresRespondidos = new Set();
 
-  $("lista-setores").innerHTML = "";
-  $("lista-perguntas") && ($("lista-perguntas").innerHTML = "");
+    const sessao = await apiGet({
+      action: "criarSessao",
+      id_huddle: huddle.id_huddle,
+      id_usuario: estado.usuario.id_usuario
+    });
 
-  await executarComLoading(
-    "Carregando setores...",
-    () => carregarSetores(huddle.id_huddle)
+    if (!sessao.sucesso) {
+      throw new Error(sessao.erro || "Não foi possível criar a sessão.");
+    }
+
+    estado.sessao = sessao;
+
+    await carregarSetores(huddle.id_huddle);
+
+    mostrarTelaSetores();
+  });
+}
+
+function voltarParaHuddles() {
+  if (carregando) return;
+
+  const confirmar = confirm(
+    "Deseja trocar o Huddle? A sessão atual não será finalizada."
   );
+
+  if (!confirmar) return;
+
+  executarComLoading("Carregando Huddles...", carregarHuddles);
 }
 
 /* =========================
@@ -181,11 +214,6 @@ async function selecionarHuddle(huddle) {
 async function carregarSetores(idHuddle) {
   const tokenAtual = ++tokenRequisicao;
 
-  mostrarTela("tela-setor");
-
-  const lista = $("lista-setores");
-  lista.innerHTML = "";
-
   const setores = await apiGet({
     action: "setores",
     id_huddle: idHuddle
@@ -193,21 +221,64 @@ async function carregarSetores(idHuddle) {
 
   if (tokenAtual !== tokenRequisicao) return;
 
+  estado.setores = setores;
+}
+
+function mostrarTelaSetores() {
+  $("info-sessao").innerText =
+    `${estado.huddle.nome_huddle} | Sessão: ${estado.sessao.id_sessao}`;
+
+  $("info-usuario-setor").innerText =
+    `${estado.usuario.nome} | ${estado.usuario.cargo}`;
+
+  renderizarSetores();
+
+  mostrarTela("tela-setor");
+}
+
+function renderizarSetores() {
+  const lista = $("lista-setores");
   lista.innerHTML = "";
 
-  setores.forEach(setor => {
-    const btn = document.createElement("button");
+  estado.setores.forEach(setor => {
+    const respondido =
+      estado.setoresRespondidos.has(String(setor.id_setor));
 
-    btn.innerText = setor.nome_setor;
+    const card = document.createElement("button");
+    card.className = "card-setor" + (respondido ? " respondido" : "");
 
-    btn.onclick = () => selecionarSetor(setor);
+    card.innerHTML = `
+      <h3>${setor.nome_setor}</h3>
+      <span class="tag-status ${respondido ? "tag-respondido" : "tag-aguardando"}">
+        ${respondido ? "Respondido" : "Aguardando Resposta"}
+      </span>
+    `;
 
-    lista.appendChild(btn);
+    if (respondido) {
+      card.disabled = true;
+    } else {
+      card.onclick = () => selecionarSetor(setor);
+    }
+
+    lista.appendChild(card);
   });
+
+  const total = estado.setores.length;
+  const respondidos = estado.setoresRespondidos.size;
+
+  if (total > 0 && respondidos === total) {
+    $("btn-finalizar-sessao").classList.remove("hidden");
+  } else {
+    $("btn-finalizar-sessao").classList.add("hidden");
+  }
 }
 
 async function selecionarSetor(setor) {
   if (carregando) return;
+
+  if (estado.setoresRespondidos.has(String(setor.id_setor))) {
+    return;
+  }
 
   estado.setor = setor;
   estado.indice = 0;
@@ -298,38 +369,20 @@ function montarCampoResposta(pergunta) {
     return;
   }
 
-  if (
-    pergunta.tipo === "SIM_NAO" ||
-    pergunta.tipo === "SIM_NAO_OBS" ||
-    pergunta.tipo === "PENDENCIA"
-  ) {
-    area.innerHTML = `
-      <div class="opcoes-resposta">
-        <button id="btn-sim" onclick="selecionarResposta('SIM')">SIM</button>
-        <button id="btn-nao" onclick="selecionarResposta('NÃO')">NÃO</button>
-      </div>
-
-      ${htmlObservacao(respostaSalva)}
-
-      <div id="area-condicional"></div>
-    `;
-
-    if (respostaSalva) {
-      selecionarResposta(respostaSalva.resposta, respostaSalva);
-    }
-
-    return;
-  }
-
   area.innerHTML = `
-    <label>Resposta</label>
-    <textarea
-      id="campo-resposta"
-      placeholder="Digite a resposta"
-    >${respostaSalva ? respostaSalva.resposta : ""}</textarea>
+    <div class="opcoes-resposta">
+      <button id="btn-sim" onclick="selecionarResposta('SIM')">SIM</button>
+      <button id="btn-nao" onclick="selecionarResposta('NÃO')">NÃO</button>
+    </div>
 
     ${htmlObservacao(respostaSalva)}
+
+    <div id="area-condicional"></div>
   `;
+
+  if (respostaSalva) {
+    selecionarResposta(respostaSalva.resposta, respostaSalva);
+  }
 }
 
 function htmlObservacao(respostaSalva) {
@@ -413,7 +466,7 @@ function continuarPergunta() {
     estado.indice++;
     mostrarPergunta();
   } else {
-    finalizarHuddle();
+    finalizarSetor();
   }
 }
 
@@ -446,11 +499,7 @@ function montarRespostaAtual(pergunta) {
     observacao = $("campo-observacao")?.value.trim() || "";
   }
 
-  else if (
-    pergunta.tipo === "SIM_NAO" ||
-    pergunta.tipo === "SIM_NAO_OBS" ||
-    pergunta.tipo === "PENDENCIA"
-  ) {
+  else {
     resposta = respostaTemporaria;
 
     if (!resposta) {
@@ -476,11 +525,6 @@ function montarRespostaAtual(pergunta) {
         descricao = observacao;
       }
     }
-  }
-
-  else {
-    resposta = $("campo-resposta")?.value.trim() || "";
-    observacao = $("campo-observacao")?.value.trim() || "";
   }
 
   return {
@@ -513,19 +557,16 @@ function salvarRespostaLocal(resposta) {
 function voltarPergunta() {
   if (carregando) return;
 
-  const pergunta = estado.perguntas[estado.indice];
-
-  if (pergunta) {
-    const resposta = montarRespostaAtual(pergunta);
-
-    if (resposta) {
-      salvarRespostaLocal(resposta);
-    }
+  if (estado.indice === 0) {
+    mostrarTelaSetores();
+    return;
   }
 
-  if (estado.indice === 0) {
-    mostrarTela("tela-setor");
-    return;
+  const pergunta = estado.perguntas[estado.indice];
+  const resposta = montarRespostaAtual(pergunta);
+
+  if (resposta) {
+    salvarRespostaLocal(resposta);
   }
 
   estado.indice--;
@@ -533,14 +574,15 @@ function voltarPergunta() {
 }
 
 /* =========================
-   SALVAR
+   SALVAR SETOR
 ========================= */
 
-async function finalizarHuddle() {
+async function finalizarSetor() {
   if (carregando) return;
 
   const payload = {
-    action: "salvar",
+    action: "salvarSetor",
+    id_sessao: estado.sessao.id_sessao,
     id_usuario: estado.usuario.id_usuario,
     usuario: estado.usuario.nome,
     cargo: estado.usuario.cargo,
@@ -551,7 +593,7 @@ async function finalizarHuddle() {
     respostas: estado.respostas
   };
 
-  await executarComLoading("Salvando Huddle...", async () => {
+  await executarComLoading("Salvando respostas do setor...", async () => {
     try {
       await fetch(API, {
         method: "POST",
@@ -559,12 +601,41 @@ async function finalizarHuddle() {
         mode: "no-cors"
       });
 
-      mostrarTela("tela-final");
+      estado.setoresRespondidos.add(String(estado.setor.id_setor));
+      estado.setor = null;
+      estado.perguntas = [];
+      estado.respostas = [];
+      estado.indice = 0;
+
+      mostrarTelaSetores();
 
     } catch (erro) {
       salvarOffline(payload);
-      mostrarTela("tela-final");
+
+      estado.setoresRespondidos.add(String(estado.setor.id_setor));
+      mostrarTelaSetores();
     }
+  });
+}
+
+/* =========================
+   FINALIZAR SESSÃO
+========================= */
+
+async function finalizarSessao() {
+  if (carregando) return;
+
+  const confirmar = confirm("Finalizar este Huddle?");
+
+  if (!confirmar) return;
+
+  await executarComLoading("Finalizando Huddle...", async () => {
+    await apiGet({
+      action: "finalizarSessao",
+      id_sessao: estado.sessao.id_sessao
+    });
+
+    mostrarTela("tela-final");
   });
 }
 
@@ -584,7 +655,10 @@ function reiniciar() {
   if (carregando) return;
 
   estado.huddle = null;
+  estado.sessao = null;
   estado.setor = null;
+  estado.setores = [];
+  estado.setoresRespondidos = new Set();
   estado.perguntas = [];
   estado.indice = 0;
   estado.respostas = [];
