@@ -37,10 +37,29 @@
       <div id="lista-huddles" class="grid-botoes"></div>
     </section>
 
-    <!-- SETOR -->
+    <!-- SETORES -->
     <section id="tela-setor" class="tela hidden">
-      <h2>Selecione o Setor</h2>
-      <div id="lista-setores" class="grid-botoes"></div>
+      <div class="barra-info">
+        <span id="info-sessao"></span>
+        <span id="info-usuario-setor"></span>
+      </div>
+
+      <h2>Setores do Huddle</h2>
+      <p class="texto-apoio">
+        Selecione um setor para responder. Setores já respondidos ficam bloqueados para evitar duplicidade.
+      </p>
+
+      <div id="lista-setores" class="grid-setores"></div>
+
+      <div class="acoes">
+        <button class="btn-secundario" onclick="voltarParaHuddles()">
+          Trocar Huddle
+        </button>
+
+        <button id="btn-finalizar-sessao" class="btn-principal hidden" onclick="finalizarSessao()">
+          Finalizar Huddle
+        </button>
+      </div>
     </section>
 
     <!-- PERGUNTA -->
@@ -73,11 +92,11 @@
 
     <!-- FINAL -->
     <section id="tela-final" class="tela hidden">
-      <h2>Huddle registrado com sucesso!</h2>
-      <p>As respostas foram enviadas para a planilha.</p>
+      <h2>Huddle finalizado com sucesso!</h2>
+      <p>A sessão do Huddle foi encerrada.</p>
 
       <button class="btn-principal" onclick="reiniciar()">
-        Registrar novo Huddle
+        Iniciar novo Huddle
       </button>
     </section>
 
@@ -93,7 +112,7 @@
 
   </main>
 
-  <!-- TELA DE CARREGAMENTO -->
+  <!-- CARREGANDO -->
   <div id="loading" class="loading hidden">
     <div class="loading-card">
       <div class="spinner"></div>
