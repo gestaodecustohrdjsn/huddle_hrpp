@@ -7,6 +7,7 @@
   --texto: #1f2933;
   --erro: #d9534f;
   --verde: #28a745;
+  --amarelo: #f59e0b;
 }
 
 * {
@@ -28,22 +29,61 @@ body {
   padding: 35px 25px;
 }
 
+/* =========================
+   CABEÇALHO
+========================= */
+
 .header {
+  position: relative;
   margin-bottom: 30px;
   border-bottom: 4px solid var(--turquesa);
-  padding-bottom: 15px;
+  padding: 20px 0 18px;
+  text-align: center;
 }
 
-.header h1 {
+.header-icons {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-icons img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 16px;
+}
+
+.header-logos img {
+  max-height: 72px;
+  max-width: 230px;
+  object-fit: contain;
+}
+
+.header-titulo h1 {
   margin: 0;
   color: var(--azul);
   font-size: 2.4rem;
 }
 
-.header p {
+.header-titulo p {
   margin: 8px 0 0;
   color: #666;
 }
+
+/* =========================
+   TELAS
+========================= */
 
 .tela {
   animation: aparecer 0.25s ease;
@@ -57,6 +97,16 @@ h2 {
   font-size: 1.8rem;
   margin-bottom: 25px;
 }
+
+.texto-apoio {
+  color: #666;
+  margin-top: -12px;
+  margin-bottom: 24px;
+}
+
+/* =========================
+   FORMULÁRIOS
+========================= */
 
 select,
 input,
@@ -81,11 +131,9 @@ label {
   margin-top: 10px;
 }
 
-.grid-botoes {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 14px;
-}
+/* =========================
+   BOTÕES GERAIS
+========================= */
 
 button {
   border: none;
@@ -105,17 +153,6 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-.grid-botoes button {
-  background: var(--turquesa-claro);
-  color: #111;
-  min-height: 70px;
-}
-
-.grid-botoes button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 151, 178, 0.2);
-}
-
 .btn-principal {
   background: var(--azul);
   color: white;
@@ -129,6 +166,103 @@ textarea:disabled {
   background: #e5e7eb;
   color: #222;
 }
+
+/* =========================
+   GRID DE HUDDLES
+========================= */
+
+.grid-botoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.grid-botoes button {
+  background: var(--turquesa-claro);
+  color: #111;
+  min-height: 70px;
+}
+
+.grid-botoes button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 151, 178, 0.2);
+}
+
+/* =========================
+   LISTA DE SETORES
+========================= */
+
+.lista-setores {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 14px;
+  overflow: hidden;
+  background: white;
+}
+
+.item-setor {
+  width: 100%;
+  background: white;
+  border: none;
+  border-bottom: 1px solid var(--cinza-borda);
+  border-radius: 0;
+  padding: 18px 20px;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  text-align: left;
+  color: var(--texto);
+}
+
+.item-setor:last-child {
+  border-bottom: none;
+}
+
+.item-setor:hover {
+  background: #f8fafc;
+  transform: none;
+  box-shadow: none;
+}
+
+.item-setor.respondido {
+  background: #fafafa;
+  cursor: default;
+  opacity: 0.78;
+}
+
+.nome-setor {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.tag-status {
+  white-space: nowrap;
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid var(--cinza-borda);
+  background: white;
+  color: #555;
+}
+
+.tag-respondido {
+  border-color: #999;
+  color: #333;
+}
+
+.tag-aguardando {
+  border-color: #c7a64b;
+  color: #7a5b00;
+}
+
+/* =========================
+   PERGUNTAS
+========================= */
 
 .acoes {
   display: flex;
@@ -167,7 +301,7 @@ textarea:disabled {
 
 .bloco-pendencia {
   background: #fff7ed;
-  border-left: 5px solid #f59e0b;
+  border-left: 5px solid var(--amarelo);
   padding: 18px;
   border-radius: 12px;
   margin-top: 18px;
@@ -190,6 +324,10 @@ textarea:disabled {
   font-weight: bold;
   color: var(--turquesa);
 }
+
+/* =========================
+   CARREGANDO
+========================= */
 
 .loading {
   position: fixed;
@@ -225,6 +363,10 @@ textarea:disabled {
   animation: girar 0.8s linear infinite;
 }
 
+/* =========================
+   ANIMAÇÕES
+========================= */
+
 @keyframes girar {
   to {
     transform: rotate(360deg);
@@ -243,12 +385,39 @@ textarea:disabled {
   }
 }
 
+/* =========================
+   MOBILE
+========================= */
+
 @media (max-width: 600px) {
   .container {
     padding: 25px 15px;
   }
 
-  .header h1 {
+  .header {
+    padding-top: 70px;
+  }
+
+  .header-icons {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .header-icons img {
+    height: 36px;
+  }
+
+  .header-logos {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .header-logos img {
+    max-height: 58px;
+    max-width: 180px;
+  }
+
+  .header-titulo h1 {
     font-size: 2rem;
   }
 
@@ -259,63 +428,10 @@ textarea:disabled {
   .barra-info {
     flex-direction: column;
   }
-}
 
-.texto-apoio {
-  color: #666;
-  margin-top: -12px;
-  margin-bottom: 24px;
-}
-
-.grid-setores {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 14px;
-}
-
-.card-setor {
-  background: var(--turquesa-claro);
-  color: #111;
-  min-height: 92px;
-  border-radius: 14px;
-  padding: 16px;
-  border: 2px solid transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.card-setor:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 151, 178, 0.2);
-}
-
-.card-setor.respondido {
-  background: #ecfdf3;
-  border-color: #28a745;
-  cursor: not-allowed;
-  opacity: 0.85;
-}
-
-.card-setor h3 {
-  margin: 0 0 10px;
-  font-size: 1.05rem;
-}
-
-.tag-status {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.tag-aguardando {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.tag-respondido {
-  background: #d4edda;
-  color: #155724;
+  .item-setor {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
