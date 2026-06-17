@@ -1,5 +1,5 @@
 const API =
-  "https://script.google.com/macros/s/AKfycbxDO0C6JA71KBdPs1VvMTs8oxd0fLBnOFWSqI14SAM46OSWSdP-Ld6BaJsPI2AQwlFILw/exec";
+  "https://script.google.com/macros/s/AKfycbwUNzXsui20Sduntbk6_fiR5_QVxnVwPRLLMzvNAq0ywaGPKVvhZMlVADYo7LtN48KOxQ/exec";
 
 const CHAVE_SESSAO_ATIVA = "huddle_hrpp_sessao_ativa";
 
@@ -144,9 +144,17 @@ async function tentarRetomarSessao() {
 
   if (!sessaoSalva) return false;
 
+  const dataSessao =
+    sessaoSalva.sessao?.data || "Data não identificada";
+
+  const horaInicio =
+    sessaoSalva.sessao?.hora_inicio || "Hora não identificada";
+
   const textoConfirmacao =
     `Existe uma sessão de Huddle em andamento:\n\n` +
     `Huddle: ${sessaoSalva.huddle?.nome_huddle || ""}\n` +
+    `Data: ${dataSessao}\n` +
+    `Início: ${horaInicio}\n` +
     `Sessão: ${sessaoSalva.sessao?.id_sessao || ""}\n\n` +
     `Deseja retomar essa sessão?`;
 
@@ -166,12 +174,17 @@ async function tentarRetomarSessao() {
     });
 
     if (!statusSessao.sucesso) {
+      alert(
+        "Não foi possível retomar a sessão salva.\n\n" +
+        "Motivo: " + (statusSessao.erro || "Sessão não encontrada na planilha.") + "\n\n" +
+        "Essa sessão local será removida. Inicie um novo Huddle."
+      );
+
       limparSessaoLocal();
-      alert("Não foi possível retomar a sessão salva.");
       return;
     }
 
-    if (String(statusSessao.status || "").toUpperCase() === "FINALIZADO") {
+    if (String(statusSessao.status || "").trim().toUpperCase() === "FINALIZADO") {
       limparSessaoLocal();
       alert("Essa sessão já foi finalizada.");
       return;
@@ -179,6 +192,7 @@ async function tentarRetomarSessao() {
 
     estado.usuario = sessaoSalva.usuario;
     estado.huddle = sessaoSalva.huddle;
+
     estado.sessao = {
       ...sessaoSalva.sessao,
       ...statusSessao
