@@ -244,23 +244,22 @@ function renderizarSetores() {
     const respondido =
       estado.setoresRespondidos.has(String(setor.id_setor));
 
-    const card = document.createElement("button");
-    card.className = "card-setor" + (respondido ? " respondido" : "");
+    const item = document.createElement("button");
+    item.className = "item-setor" + (respondido ? " respondido" : "");
 
-    card.innerHTML = `
-      <h3>${setor.nome_setor}</h3>
+    item.innerHTML = `
+      <span class="nome-setor">${setor.nome_setor}</span>
+
       <span class="tag-status ${respondido ? "tag-respondido" : "tag-aguardando"}">
         ${respondido ? "Respondido" : "Aguardando Resposta"}
       </span>
     `;
 
-    if (respondido) {
-      card.disabled = true;
-    } else {
-      card.onclick = () => selecionarSetor(setor);
+    if (!respondido) {
+      item.onclick = () => selecionarSetor(setor);
     }
 
-    lista.appendChild(card);
+    lista.appendChild(item);
   });
 
   const total = estado.setores.length;
