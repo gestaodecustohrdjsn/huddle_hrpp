@@ -1,5 +1,5 @@
 const API =
-  "https://script.google.com/macros/s/AKfycbx4DBlMtwd3BGJKGiQ_54fFoGbtdzSrWzNJquSWnABvuli5k3DtLj4amPfZEUTZ4sc-Jg/exec";
+  "https://script.google.com/macros/s/AKfycbySO6CbAdoGDAYCBr5bSkV04LqQ669goktMWCU7KeYeX1kbh6WSTIhhxQkQwtBPHF86-Q/exec";
 
 const CHAVE_SESSAO_ATIVA = "huddle_hrpp_sessao_ativa";
 
