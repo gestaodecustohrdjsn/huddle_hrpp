@@ -1,5 +1,5 @@
 const API =
-  "https://script.google.com/macros/s/AKfycbwUNzXsui20Sduntbk6_fiR5_QVxnVwPRLLMzvNAq0ywaGPKVvhZMlVADYo7LtN48KOxQ/exec";
+  "https://script.google.com/macros/s/AKfycby--hSnsXwdc8R_mNTh-YbACAkrWa_Z0rZNMh8IevuS1K8eTz11dc6LIUuC6iq2iJczaw/exec";
 
 const CHAVE_SESSAO_ATIVA = "huddle_hrpp_sessao_ativa";
 
@@ -845,6 +845,43 @@ function gerarHtmlResumoRespostas(respostas) {
    SALVAR SETOR
 ========================= */
 
+function postarViaFormulario(payload) {
+  return new Promise(resolve => {
+    const nomeIframe = "iframe_post_" + Date.now();
+
+    const iframe = document.createElement("iframe");
+    iframe.name = nomeIframe;
+    iframe.style.display = "none";
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = API;
+    form.target = nomeIframe;
+    form.style.display = "none";
+
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "payload";
+    input.value = JSON.stringify(payload);
+
+    form.appendChild(input);
+
+    document.body.appendChild(iframe);
+    document.body.appendChild(form);
+
+    form.submit();
+
+    setTimeout(() => {
+      resolve();
+    }, 2500);
+
+    setTimeout(() => {
+      form.remove();
+      iframe.remove();
+    }, 15000);
+  });
+}
+
 async function finalizarSetor() {
   if (carregando) return;
 
@@ -865,18 +902,14 @@ async function finalizarSetor() {
 
   await executarComLoading("Salvando respostas do setor...", async () => {
     try {
-      await fetch(API, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        mode: "no-cors"
-      });
+      await postarViaFormulario(payload);
 
-      const confirmado = await confirmarSetorGravado(idSetorFinalizado);
+      const confirmado = await confirmarSetorGravado(idSetorFinalizado, 8);
 
       if (!confirmado) {
         alert(
           "O envio foi realizado, mas ainda não foi possível confirmar a gravação na planilha.\n\n" +
-          "Confira a conexão ou tente salvar novamente em alguns segundos."
+          "Confira se o Apps Script foi implantado como nova versão e tente salvar novamente."
         );
 
         mostrarRevisaoSetor();
