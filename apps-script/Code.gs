@@ -24,6 +24,18 @@ function doGet(e) {
       case "finalizarSessao":
         return jsonOutput(finalizarSessaoHuddle(e.parameter.id_sessao));
 
+      case "setoresRespondidos":
+        return jsonOutput(buscarSetoresRespondidos(e.parameter.id_sessao));
+
+      case "confirmarSetor":
+        return jsonOutput(confirmarSetorRespondido(
+          e.parameter.id_sessao,
+          e.parameter.id_setor
+        ));
+
+      case "finalizarSessao":
+        return jsonOutput(finalizarSessaoHuddle(e.parameter.id_sessao));
+
       default:
         return jsonOutput({
           status: "ok",
@@ -40,7 +52,22 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const dados = JSON.parse(e.postData.contents);
+    let dados = null;
+
+    if (e.parameter && e.parameter.payload) {
+      dados = JSON.parse(e.parameter.payload);
+    }
+
+    else if (e.postData && e.postData.contents) {
+      dados = JSON.parse(e.postData.contents);
+    }
+
+    else {
+      return jsonOutput({
+        sucesso: false,
+        erro: "Nenhum dado recebido no POST."
+      });
+    }
 
     if (dados.action === "salvarSetor" || dados.action === "salvar") {
       const resultado = salvarSetorHuddle(dados);
@@ -49,7 +76,7 @@ function doPost(e) {
 
     return jsonOutput({
       sucesso: false,
-      erro: "Ação inválida."
+      erro: "Ação inválida: " + dados.action
     });
 
   } catch (erro) {
@@ -243,12 +270,16 @@ function salvarSetorHuddle(dados) {
       id_setor: dados.id_setor,
       id_usuario: dados.id_usuario,
       status_execucao: "Finalizado"
+      
     });
 
     dados.respostas.forEach(resposta => {
       appendPorCabecalho("Respostas", {
         id_resposta: gerarId("RESP"),
         id_execucao: idExecucao,
+        id_sessao: dados.id_sessao,
+        id_huddle: dados.id_huddle,
+        id_setor: dados.id_setor,
         id_pergunta: resposta.id_pergunta,
         resposta: resposta.resposta,
         observacao: resposta.observacao || ""
@@ -265,8 +296,10 @@ function salvarSetorHuddle(dados) {
         appendPorCabecalho("Pendencias", {
           id_pendencia: idPendencia,
           id_execucao: idExecucao,
+          id_sessao: dados.id_sessao,
           data_abertura: data,
           hora_abertura: hora,
+          id_huddle: dados.id_huddle,
           id_setor: dados.id_setor,
           id_pergunta: resposta.id_pergunta,
           categoria: resposta.categoria || "",
@@ -422,4 +455,59 @@ function formatarValorPlanilha(valor) {
   }
 
   return String(valor);
+}
+
+function buscarSetoresRespondidos(idSessao) {
+  const registros = lerObjetos("Huddles");
+
+  const setores = registros
+    .filter(r =>
+      String(r.id_sessao || "").trim() === String(idSessao || "").trim() &&
+      String(r.id_setor || "").trim() !== ""
+    )
+    .map(r => String(r.id_setor).trim());
+
+  const setoresUnicos = [...new Set(setores)];
+
+  return {
+    sucesso: true,
+    id_sessao: idSessao,
+    setores: setoresUnicos,
+    total: setoresUnicos.length
+  };
+}
+
+
+function confirmarSetorRespondido(idSessao, idSetor) {
+  if (!idSessao || !idSetor) {
+    return {
+      sucesso: false,
+      confirmado: false,
+      erro: "id_sessao ou id_setor não informado."
+    };
+  }
+
+  const registros = lerObjetos("Huddles");
+
+  const encontrado = registros.find(r =>
+    String(r.id_sessao || "").trim() === String(idSessao || "").trim() &&
+    String(r.id_setor || "").trim() === String(idSetor || "").trim()
+  );
+
+  if (!encontrado) {
+    return {
+      sucesso: true,
+      confirmado: false,
+      id_sessao: idSessao,
+      id_setor: idSetor
+    };
+  }
+
+  return {
+    sucesso: true,
+    confirmado: true,
+    id_sessao: idSessao,
+    id_setor: idSetor,
+    id_execucao: encontrado.id_execucao || ""
+  };
 }
