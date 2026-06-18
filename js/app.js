@@ -1,5 +1,5 @@
 const API =
-  "https://script.google.com/macros/s/AKfycby--hSnsXwdc8R_mNTh-YbACAkrWa_Z0rZNMh8IevuS1K8eTz11dc6LIUuC6iq2iJczaw/exec";
+  "https://script.google.com/macros/s/AKfycbxsQlUK2ZGi8SDR-DIWtk-wuLZTMvR1-BWJ4wuHzGPBr33UdEqr1Y5A4AhT-7CFbSzO3Q/exec";
 
 const CHAVE_SESSAO_ATIVA = "huddle_hrpp_sessao_ativa";
 
@@ -845,40 +845,14 @@ function gerarHtmlResumoRespostas(respostas) {
    SALVAR SETOR
 ========================= */
 
-function postarViaFormulario(payload) {
-  return new Promise(resolve => {
-    const nomeIframe = "iframe_post_" + Date.now();
+async function postarPayload(payload) {
+  const corpo = new URLSearchParams();
+  corpo.append("payload", JSON.stringify(payload));
 
-    const iframe = document.createElement("iframe");
-    iframe.name = nomeIframe;
-    iframe.style.display = "none";
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = API;
-    form.target = nomeIframe;
-    form.style.display = "none";
-
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "payload";
-    input.value = JSON.stringify(payload);
-
-    form.appendChild(input);
-
-    document.body.appendChild(iframe);
-    document.body.appendChild(form);
-
-    form.submit();
-
-    setTimeout(() => {
-      resolve();
-    }, 2500);
-
-    setTimeout(() => {
-      form.remove();
-      iframe.remove();
-    }, 15000);
+  await fetch(API, {
+    method: "POST",
+    mode: "no-cors",
+    body: corpo
   });
 }
 
@@ -902,7 +876,7 @@ async function finalizarSetor() {
 
   await executarComLoading("Salvando respostas do setor...", async () => {
     try {
-      await postarViaFormulario(payload);
+      await postarPayload(payload);
 
       const confirmado = await confirmarSetorGravado(idSetorFinalizado, 8);
 
