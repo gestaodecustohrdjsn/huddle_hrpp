@@ -1,5 +1,5 @@
 const API =
-  "https://script.google.com/macros/s/AKfycbxsQlUK2ZGi8SDR-DIWtk-wuLZTMvR1-BWJ4wuHzGPBr33UdEqr1Y5A4AhT-7CFbSzO3Q/exec";
+  "https://script.google.com/macros/s/AKfycbx4DBlMtwd3BGJKGiQ_54fFoGbtdzSrWzNJquSWnABvuli5k3DtLj4amPfZEUTZ4sc-Jg/exec";
 
 const CHAVE_SESSAO_ATIVA = "huddle_hrpp_sessao_ativa";
 
@@ -89,9 +89,17 @@ async function executarComLoading(texto, funcao) {
 }
 
 async function apiGet(parametros) {
-  const url = API + "?" + new URLSearchParams(parametros).toString();
+  const parametrosComCache = {
+    ...parametros,
+    _cache: Date.now() + "_" + Math.random()
+  };
 
-  const resposta = await fetch(url);
+  const url = API + "?" + new URLSearchParams(parametrosComCache).toString();
+
+  const resposta = await fetch(url, {
+    method: "GET",
+    cache: "no-store"
+  });
 
   if (!resposta.ok) {
     throw new Error("Falha na API: " + resposta.status);
@@ -912,11 +920,22 @@ async function finalizarSetor() {
   });
 }
 
-async function confirmarSetorGravado(idSetor, tentativas = 5) {
+async function confirmarSetorGravado(idSetor, tentativas = 8) {
   for (let i = 0; i < tentativas; i++) {
-    await esperar(i === 0 ? 1200 : 1000);
+    await esperar(i === 0 ? 1500 : 1000);
 
     try {
+      const retorno = await apiGet({
+        action: "confirmarSetor",
+        id_sessao: estado.sessao.id_sessao,
+        id_setor: idSetor
+      });
+
+      if (retorno.sucesso && retorno.confirmado) {
+        estado.setoresRespondidos.add(String(idSetor));
+        return true;
+      }
+
       await sincronizarSetoresRespondidos();
 
       if (estado.setoresRespondidos.has(String(idSetor))) {
