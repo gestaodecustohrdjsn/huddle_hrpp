@@ -473,6 +473,12 @@ function mostrarPergunta() {
   $("texto-pergunta").innerText =
     pergunta.pergunta;
 
+  $("btn-voltar-pergunta").innerText =
+    estado.indice === 0 ? "Voltar para setores" : "Voltar";
+
+  $("btn-continuar-pergunta").innerText =
+    estado.indice === estado.perguntas.length - 1 ? "Revisar setor" : "Continuar";
+
   montarCampoResposta(pergunta);
 
   mostrarTela("tela-pergunta");
@@ -601,7 +607,7 @@ function continuarPergunta() {
 
   const pergunta = estado.perguntas[estado.indice];
 
-  const resposta = montarRespostaAtual(pergunta);
+  const resposta = montarRespostaAtual(pergunta, true);
 
   if (!resposta) return;
 
@@ -611,11 +617,42 @@ function continuarPergunta() {
     estado.indice++;
     mostrarPergunta();
   } else {
-    finalizarSetor();
+    mostrarRevisaoSetor();
   }
 }
 
-function montarRespostaAtual(pergunta) {
+function voltarPergunta() {
+  if (carregando) return;
+
+  salvarRascunhoPerguntaAtual();
+
+  if (estado.indice === 0) {
+    if (estado.respostas.length > 0) {
+      abrirModalProgresso();
+    } else {
+      mostrarTelaSetores();
+    }
+
+    return;
+  }
+
+  estado.indice--;
+  mostrarPergunta();
+}
+
+function salvarRascunhoPerguntaAtual() {
+  const pergunta = estado.perguntas[estado.indice];
+
+  if (!pergunta) return;
+
+  const resposta = montarRespostaAtual(pergunta, false);
+
+  if (resposta) {
+    salvarRespostaLocal(resposta);
+  }
+}
+
+function montarRespostaAtual(pergunta, validar = true) {
   let resposta = "";
   let observacao = "";
   let descricao = "";
@@ -623,36 +660,45 @@ function montarRespostaAtual(pergunta) {
   let prazo = "";
 
   if (pergunta.tipo === "NUMERO") {
-    resposta = $("campo-resposta").value;
+    resposta = $("campo-resposta")?.value || "";
+    observacao = $("campo-observacao")?.value.trim() || "";
 
-    if (pergunta.obrigatoria === "SIM" && resposta === "") {
+    if (validar && pergunta.obrigatoria === "SIM" && resposta === "") {
       alert("Preencha a resposta.");
       return null;
     }
 
-    observacao = $("campo-observacao")?.value.trim() || "";
+    if (!validar && resposta === "" && !observacao) {
+      return null;
+    }
   }
 
   else if (pergunta.tipo === "TEXTO") {
-    resposta = $("campo-resposta").value.trim();
+    resposta = $("campo-resposta")?.value.trim() || "";
+    observacao = $("campo-observacao")?.value.trim() || "";
 
-    if (pergunta.obrigatoria === "SIM" && !resposta) {
+    if (validar && pergunta.obrigatoria === "SIM" && !resposta) {
       alert("Preencha a resposta.");
       return null;
     }
 
-    observacao = $("campo-observacao")?.value.trim() || "";
+    if (!validar && !resposta && !observacao) {
+      return null;
+    }
   }
 
   else {
     resposta = respostaTemporaria;
+    observacao = $("campo-observacao")?.value.trim() || "";
 
-    if (!resposta) {
+    if (validar && !resposta) {
       alert("Selecione SIM ou NÃO.");
       return null;
     }
 
-    observacao = $("campo-observacao")?.value.trim() || "";
+    if (!validar && !resposta && !observacao) {
+      return null;
+    }
 
     const deveGerarPendencia = verificarGatilhoPendencia(pergunta, resposta);
 
@@ -661,7 +707,7 @@ function montarRespostaAtual(pergunta) {
       responsavel = $("campo-responsavel")?.value.trim() || "";
       prazo = $("campo-prazo")?.value || "";
 
-      if (!descricao && !observacao) {
+      if (validar && !descricao && !observacao) {
         alert("Descreva a situação para gerar a pendência.");
         return null;
       }
@@ -699,23 +745,100 @@ function salvarRespostaLocal(resposta) {
   }
 }
 
-function voltarPergunta() {
+/* =========================
+   MODAL DE PROGRESSO
+========================= */
+
+function abrirModalProgresso() {
+  $("resumo-progresso").innerHTML = gerarHtmlResumoRespostas(estado.respostas);
+  $("modal-progresso").classList.remove("hidden");
+}
+
+function fecharModalProgresso() {
+  $("modal-progresso").classList.add("hidden");
+}
+
+function descartarProgressoEVoltar() {
+  $("modal-progresso").classList.add("hidden");
+
+  estado.setor = null;
+  estado.perguntas = [];
+  estado.respostas = [];
+  estado.indice = 0;
+
+  mostrarTelaSetores();
+}
+
+/* =========================
+   REVISÃO
+========================= */
+
+function mostrarRevisaoSetor() {
+  $("info-revisao").innerText =
+    `${estado.huddle.nome_huddle} | ${estado.setor.nome_setor}`;
+
+  $("info-revisao-usuario").innerText =
+    `${estado.usuario.nome} | ${estado.usuario.cargo}`;
+
+  $("resumo-respostas").innerHTML =
+    gerarHtmlResumoRespostas(estado.respostas);
+
+  mostrarTela("tela-revisao");
+}
+
+function voltarDaRevisao() {
   if (carregando) return;
 
-  if (estado.indice === 0) {
-    mostrarTelaSetores();
-    return;
-  }
-
-  const pergunta = estado.perguntas[estado.indice];
-  const resposta = montarRespostaAtual(pergunta);
-
-  if (resposta) {
-    salvarRespostaLocal(resposta);
-  }
-
-  estado.indice--;
+  estado.indice = estado.perguntas.length - 1;
   mostrarPergunta();
+}
+
+function salvarSetorRevisado() {
+  if (carregando) return;
+
+  finalizarSetor();
+}
+
+function gerarHtmlResumoRespostas(respostas) {
+  if (!respostas.length) {
+    return `
+      <div class="card-resumo">
+        <p>Nenhuma resposta preenchida.</p>
+      </div>
+    `;
+  }
+
+  return respostas.map((resposta, index) => {
+    const gerouPendencia =
+      String(resposta.gera_pendencia || "").trim().toUpperCase() === "SIM" &&
+      String(resposta.resposta || "").trim().toUpperCase() ===
+      String(resposta.resposta_gera_pendencia || "SIM").trim().toUpperCase();
+
+    return `
+      <div class="card-resumo">
+        <h3>${index + 1}. ${resposta.pergunta}</h3>
+
+        <p>
+          <strong>Resposta:</strong>
+          <span class="resposta-destaque">${resposta.resposta || "-"}</span>
+        </p>
+
+        ${
+          resposta.observacao
+            ? `<p><strong>Observação:</strong> ${resposta.observacao}</p>`
+            : ""
+        }
+
+        <div class="resumo-tags">
+          ${
+            gerouPendencia
+              ? `<span class="tag-status tag-pendencia">Gerou Pendência</span>`
+              : ""
+          }
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 /* =========================
@@ -748,16 +871,16 @@ async function finalizarSetor() {
         mode: "no-cors"
       });
 
-      await esperar(1200);
+      const confirmado = await confirmarSetorGravado(idSetorFinalizado);
 
-      try {
-        await sincronizarSetoresRespondidos();
-      } catch (erro) {
-        estado.setoresRespondidos.add(idSetorFinalizado);
-      }
+      if (!confirmado) {
+        alert(
+          "O envio foi realizado, mas ainda não foi possível confirmar a gravação na planilha.\n\n" +
+          "Confira a conexão ou tente salvar novamente em alguns segundos."
+        );
 
-      if (!estado.setoresRespondidos.has(idSetorFinalizado)) {
-        estado.setoresRespondidos.add(idSetorFinalizado);
+        mostrarRevisaoSetor();
+        return;
       }
 
       estado.setor = null;
@@ -772,10 +895,33 @@ async function finalizarSetor() {
     } catch (erro) {
       salvarOffline(payload);
 
-      estado.setoresRespondidos.add(idSetorFinalizado);
-      mostrarTelaSetores();
+      alert(
+        "Não foi possível confirmar o salvamento agora.\n\n" +
+        "O registro foi mantido na fila offline deste dispositivo."
+      );
+
+      mostrarRevisaoSetor();
     }
   });
+}
+
+async function confirmarSetorGravado(idSetor, tentativas = 5) {
+  for (let i = 0; i < tentativas; i++) {
+    await esperar(i === 0 ? 1200 : 1000);
+
+    try {
+      await sincronizarSetoresRespondidos();
+
+      if (estado.setoresRespondidos.has(String(idSetor))) {
+        return true;
+      }
+
+    } catch (erro) {
+      // tenta novamente
+    }
+  }
+
+  return false;
 }
 
 /* =========================

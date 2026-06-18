@@ -19,7 +19,7 @@
 
         <div class="header-titulo">
           <h1>HUDDLE HRPP</h1>
-          <p>Safety Huddle</p>
+          <p>Sistema de Registro de Huddles Hospitalares</p>
         </div>
 
         <div class="header-logos">
@@ -92,12 +92,40 @@
       <div id="area-resposta"></div>
 
       <div class="acoes">
-        <button class="btn-secundario" onclick="voltarPergunta()">
+        <button id="btn-voltar-pergunta" class="btn-secundario" onclick="voltarPergunta()">
           Voltar
         </button>
 
-        <button class="btn-principal" onclick="continuarPergunta()">
+        <button id="btn-continuar-pergunta" class="btn-principal" onclick="continuarPergunta()">
           Continuar
+        </button>
+      </div>
+
+    </section>
+
+    <!-- REVISÃO DO SETOR -->
+    <section id="tela-revisao" class="tela hidden">
+
+      <div class="barra-info">
+        <span id="info-revisao"></span>
+        <span id="info-revisao-usuario"></span>
+      </div>
+
+      <h2>Revisar respostas do setor</h2>
+
+      <p class="texto-apoio">
+        Confira as respostas antes de salvar. Depois de salvar, o setor será marcado como respondido.
+      </p>
+
+      <div id="resumo-respostas" class="resumo-respostas"></div>
+
+      <div class="acoes">
+        <button class="btn-secundario" onclick="voltarDaRevisao()">
+          Voltar e corrigir
+        </button>
+
+        <button class="btn-principal" onclick="salvarSetorRevisado()">
+          Salvar setor
         </button>
       </div>
 
@@ -124,6 +152,30 @@
     </section>
 
   </main>
+
+  <!-- MODAL DE PROGRESSO NÃO SALVO -->
+  <div id="modal-progresso" class="modal hidden">
+    <div class="modal-card">
+      <h2>Existe progresso não salvo neste setor</h2>
+
+      <p>
+        Você já respondeu algumas perguntas. Se voltar para a lista de setores,
+        esse progresso não será salvo na planilha.
+      </p>
+
+      <div id="resumo-progresso" class="resumo-respostas resumo-modal"></div>
+
+      <div class="acoes">
+        <button class="btn-secundario" onclick="fecharModalProgresso()">
+          Não, continuar respondendo
+        </button>
+
+        <button class="btn-perigo" onclick="descartarProgressoEVoltar()">
+          Sim, voltar sem salvar
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- CARREGANDO -->
   <div id="loading" class="loading hidden">
