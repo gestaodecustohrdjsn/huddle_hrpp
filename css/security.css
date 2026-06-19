@@ -1,0 +1,54 @@
+.aviso-seguranca {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  padding: 10px 16px;
+  background: #7f1d1d;
+  color: #fff;
+  text-align: center;
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.usuario-logado {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: .88rem;
+  text-align: right;
+}
+
+.login-card {
+  width: min(440px, 100%);
+  margin: 40px auto;
+  padding: 28px;
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgba(29, 55, 73, .1);
+}
+
+.largura-total {
+  width: 100%;
+}
+
+.mensagem-erro {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: var(--erro);
+  font-weight: 700;
+}
+
+.card-botao {
+  width: 100%;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.card-botao:hover {
+  transform: none;
+}
