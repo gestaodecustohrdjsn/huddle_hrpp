@@ -1,4 +1,4 @@
-const API = "https://script.google.com/macros/s/AKfycbySO6CbAdoGDAYCBr5bSkV04LqQ669goktMWCU7KeYeX1kbh6WSTIhhxQkQwtBPHF86-Q/exec";
+const API = "https://script.google.com/macros/s/AKfycbyndvdgqzn7xz4ypf4elpmgYRO1T4I8hLYUgbl5n-5Qu3JsHNKXEKS3ddihGb5-b0p6xw/exec";
 const CHAVE_SESSAO = "huddle_hrpp_session_token";
 
 const estado = {
