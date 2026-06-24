@@ -20,11 +20,11 @@ const ABAS = {
   Config_Perguntas: ["id_pergunta", "id_setor", "ordem", "pergunta", "tipo", "obrigatoria", "permite_comentario", "gera_pendencia", "resposta_gera_pendencia", "ativo"],
   Config_Categorias: ["id_categoria", "nome_categoria", "ativo", "ordem"],
   Config_Sugestoes: ["id_sugestao", "tipo", "valor", "id_categoria", "ativo", "ordem"],
-  Reunioes: ["id_reuniao", "id_huddle", "data", "hora_inicio", "hora_fim", "id_usuario", "status", "total_setores", "total_respondidos"],
-  Presencas_Setor: ["id_presenca", "id_reuniao", "id_setor", "presente", "observacao"],
-  Execucoes_Setor: ["id_execucao", "id_reuniao", "id_setor", "id_usuario_resposta", "data", "hora", "status"],
+  Reunioes: ["id_reuniao", "data", "hora_inicio", "hora_fim", "id_usuario", "status", "total_setores", "total_respondidos"],
+  Presencas_Setor: ["id_presenca", "id_reuniao", "id_huddle", "id_setor", "presente", "observacao"],
+  Execucoes_Setor: ["id_execucao", "id_reuniao", "id_huddle", "id_setor", "id_usuario_resposta", "data", "hora", "status"],
   Respostas: ["id_resposta", "id_execucao", "id_reuniao", "id_setor", "id_pergunta", "resposta", "comentario"],
-  Pendencias: ["id_pendencia", "id_reuniao", "id_execucao", "id_setor_origem", "id_pergunta", "titulo", "descricao", "id_categoria", "status", "data_abertura", "hora_abertura", "data_resolucao", "hora_resolucao", "resultado_resolucao", "concluida_dentro_prazo", "houve_problemas", "apoios_cumpriram", "motivo_nao_resolucao", "observacao_resolucao"],
+  Pendencias: ["id_pendencia", "id_reuniao", "id_execucao", "id_huddle", "id_setor_origem", "id_pergunta", "titulo", "descricao", "id_categoria", "status", "data_abertura", "hora_abertura", "data_resolucao", "hora_resolucao", "resultado_resolucao", "concluida_dentro_prazo", "houve_problemas", "apoios_cumpriram", "motivo_nao_resolucao", "observacao_resolucao"],
   Pendencia_Apoios: ["id_apoio", "id_pendencia", "id_setor_apoio", "status_acordo", "observacao"],
   Historico_Pendencias: ["id_historico", "id_pendencia", "data_hora", "id_usuario", "acao", "observacao"],
   Auditoria: ["id_evento", "data_hora", "id_usuario", "acao", "entidade", "id_entidade", "resultado", "detalhes"]
@@ -49,7 +49,7 @@ function doGet(e) {
       setores: () => buscarSetores(),
       huddles: () => buscarHuddles(),
       perguntas: () => buscarPerguntas(p.id_setor),
-      confirmarSetor: () => confirmarSetor(p.id_reuniao, p.id_setor),
+      confirmarSetor: () => confirmarSetor(p.id_reuniao, p.id_huddle, p.id_setor),
       operationStatus: () => obterStatusOperacao(p.request_id, sessao),
       authMe: () => ({ sucesso: true, usuario: sessao.usuario })
     };
@@ -442,11 +442,14 @@ function buscarReunioes() {
   const usuarios = indexar(buscarUsuarios(), "id_usuario");
   const huddles = indexar(buscarHuddles(), "id_huddle");
   const pendencias = lerObjetos("Pendencias");
+  const presencas = lerObjetos("Presencas_Setor");
   return lerObjetos("Reunioes").sort((a, b) => chaveData(b).localeCompare(chaveData(a))).map(r => {
     const relacionadas = pendencias.filter(p => String(p.id_reuniao) === String(r.id_reuniao));
+    const presencasReuniao = presencas.filter(p => String(p.id_reuniao) === String(r.id_reuniao));
+    const idsHuddles = [...new Set(presencasReuniao.map(p => String(p.id_huddle || r.id_huddle || "")).filter(Boolean))];
     return {
-      id_reuniao: r.id_reuniao, id_huddle: r.id_huddle,
-      huddle: huddles[String(r.id_huddle)] || null,
+      id_reuniao: r.id_reuniao,
+      huddles: idsHuddles.map(id => huddles[id]).filter(Boolean),
       data: formato(r.data, "dd/MM/yyyy"), hora_inicio: formato(r.hora_inicio, "HH:mm:ss"),
       hora_fim: formato(r.hora_fim, "HH:mm:ss"), id_usuario: r.id_usuario,
       usuario: usuarios[String(r.id_usuario)] || null, status: r.status,
@@ -460,14 +463,32 @@ function buscarReunioes() {
 function buscarReuniao(id) {
   const reuniao = reuniaoExistente(id);
   const setores = indexar(buscarSetores(), "id_setor");
+  const huddles = indexar(buscarHuddles(), "id_huddle");
   const apoios = lerObjetos("Pendencia_Apoios");
-  reuniao.presencas = lerObjetos("Presencas_Setor")
+  const presencas = lerObjetos("Presencas_Setor")
     .filter(x => String(x.id_reuniao) === String(id))
-    .map(x => ({ ...normalizar(x), setor: setores[String(x.id_setor)] || null }));
+    .map(x => ({
+      ...normalizar(x),
+      id_huddle: x.id_huddle || reuniao.id_huddle || "",
+      setor: setores[String(x.id_setor)] || null,
+      huddle: huddles[String(x.id_huddle || reuniao.id_huddle || "")] || null
+    }));
+  reuniao.presencas = presencas;
+  reuniao.huddles = [...new Set(presencas.map(p => String(p.id_huddle || "")).filter(Boolean))]
+    .map(idHuddle => huddles[idHuddle]).filter(Boolean);
+  reuniao.itens_pauta = presencas.map(p => ({
+    id_huddle: p.id_huddle,
+    id_setor: p.id_setor,
+    huddle: p.huddle,
+    setor: p.setor,
+    presente: p.presente
+  }));
   reuniao.pendencias = lerObjetos("Pendencias")
     .filter(x => String(x.id_reuniao) === String(id))
     .map(x => ({
-      ...normalizar(x), setor_origem: setores[String(x.id_setor_origem)] || null,
+      ...normalizar(x),
+      huddle: huddles[String(x.id_huddle || "")] || null,
+      setor_origem: setores[String(x.id_setor_origem)] || null,
       apoios: apoios.filter(a => String(a.id_pendencia) === String(x.id_pendencia))
         .map(a => ({ ...normalizar(a), setor: setores[String(a.id_setor_apoio)] || null }))
     }));
@@ -479,30 +500,47 @@ function buscarReuniao(id) {
 
 function criarReuniao(dados, sessao) {
   return executarComLock(() => {
-    const huddle = huddleAtivo(dados.id_huddle);
-    if (!huddle.setores.length) throw erroApi("HUDDLE_SEM_SETORES", "O Huddle não possui setores.");
-    const presentes = (dados.setores_presentes || []).map(String);
-    presentes.forEach(id => {
-      if (!huddle.setores.some(s => String(s.id_setor) === id)) {
-        throw erroApi("SETOR_FORA_DO_HUDDLE", "Presença contém setor fora do Huddle.");
-      }
+    const selecoes = Array.isArray(dados.huddles) ? dados.huddles : [];
+    if (!selecoes.length) throw erroApi("HUDDLE_OBRIGATORIO", "Selecione ao menos um Huddle.");
+
+    const itens = [];
+    const chaves = {};
+    selecoes.forEach(item => {
+      const huddle = huddleAtivo(item.id_huddle);
+      if (!huddle.setores.length) throw erroApi("HUDDLE_SEM_SETORES", "O Huddle não possui setores.");
+      const presentes = new Set((item.setores_presentes || []).map(String));
+      presentes.forEach(idSetor => {
+        if (!huddle.setores.some(s => String(s.id_setor) === idSetor)) {
+          throw erroApi("SETOR_FORA_DO_HUDDLE", "Presença contém setor fora do Huddle.");
+        }
+      });
+      huddle.setores.forEach(setor => {
+        const chave = huddle.id_huddle + "|" + setor.id_setor;
+        if (chaves[chave]) throw erroApi("ITEM_DUPLICADO", "Huddle e setor duplicados na reunião.");
+        chaves[chave] = true;
+        itens.push({
+          id_huddle: huddle.id_huddle,
+          id_setor: setor.id_setor,
+          presente: presentes.has(String(setor.id_setor)) ? "SIM" : "NAO"
+        });
+      });
     });
 
     const agora = new Date();
     const id = validarIdCliente(dados.id_reuniao, "REU") || gerarId("REU");
     if (buscarLinha("Reunioes", "id_reuniao", id)) throw erroApi("DUPLICADO", "Reunião já cadastrada.");
     appendPorCabecalho("Reunioes", {
-      id_reuniao: id, id_huddle: huddle.id_huddle,
+      id_reuniao: id,
       data: Utilities.formatDate(agora, TZ, "dd/MM/yyyy"),
       hora_inicio: Utilities.formatDate(agora, TZ, "HH:mm:ss"),
       hora_fim: "", id_usuario: sessao.usuario.id_usuario, status: "Em Andamento",
-      total_setores: huddle.setores.length, total_respondidos: 0
+      total_setores: itens.length, total_respondidos: 0
     });
-    huddle.setores.forEach(setor => appendPorCabecalho("Presencas_Setor", {
-      id_presenca: gerarId("PRE"), id_reuniao: id, id_setor: setor.id_setor,
-      presente: presentes.includes(String(setor.id_setor)) ? "SIM" : "NAO", observacao: ""
+    itens.forEach(item => appendPorCabecalho("Presencas_Setor", {
+      id_presenca: gerarId("PRE"), id_reuniao: id, id_huddle: item.id_huddle,
+      id_setor: item.id_setor, presente: item.presente, observacao: ""
     }));
-    auditoria(sessao.usuario.id_usuario, "CRIAR", "reuniao", id, "SUCESSO", "");
+    auditoria(sessao.usuario.id_usuario, "CRIAR", "reuniao", id, "SUCESSO", itens.length + " itens de pauta");
     return { sucesso: true, id_reuniao: id };
   });
 }
@@ -527,11 +565,14 @@ function salvarSetor(dados, sessao) {
     const reuniao = reuniaoExistente(dados.id_reuniao);
     if (reuniao.status !== "Em Andamento") throw erroApi("REUNIAO_ENCERRADA", "A reunião não está em andamento.");
     const setor = setorAtivo(dados.id_setor);
-    const huddle = huddleAtivo(reuniao.id_huddle);
-    if (!huddle.setores.some(s => String(s.id_setor) === String(setor.id_setor))) {
-      throw erroApi("SETOR_FORA_DO_HUDDLE", "Setor não pertence ao Huddle.");
-    }
-    const existente = buscarExecucao(reuniao.id_reuniao, setor.id_setor);
+    const huddle = huddleAtivo(dados.id_huddle);
+    const pertence = lerObjetos("Presencas_Setor").some(p =>
+      String(p.id_reuniao) === String(reuniao.id_reuniao) &&
+      String(p.id_huddle) === String(huddle.id_huddle) &&
+      String(p.id_setor) === String(setor.id_setor));
+    if (!pertence) throw erroApi("SETOR_FORA_DA_REUNIAO", "Setor/Huddle não pertence a esta reunião.");
+
+    const existente = buscarExecucao(reuniao.id_reuniao, huddle.id_huddle, setor.id_setor);
     if (existente) return { sucesso: true, duplicado: true, id_execucao: existente };
 
     const perguntas = indexar(buscarPerguntas(setor.id_setor), "id_pergunta");
@@ -543,8 +584,9 @@ function salvarSetor(dados, sessao) {
     const hora = Utilities.formatDate(agora, TZ, "HH:mm:ss");
     const idExecucao = gerarId("EXE");
     appendPorCabecalho("Execucoes_Setor", {
-      id_execucao: idExecucao, id_reuniao: reuniao.id_reuniao, id_setor: setor.id_setor,
-      id_usuario_resposta: sessao.usuario.id_usuario, data: data, hora: hora, status: "Finalizado"
+      id_execucao: idExecucao, id_reuniao: reuniao.id_reuniao, id_huddle: huddle.id_huddle,
+      id_setor: setor.id_setor, id_usuario_resposta: sessao.usuario.id_usuario,
+      data: data, hora: hora, status: "Finalizado"
     });
 
     respostas.forEach(r => {
@@ -558,14 +600,15 @@ function salvarSetor(dados, sessao) {
       });
       (r.pendencias || []).forEach(p => salvarPendenciaInterna({
         ...p, id_reuniao: reuniao.id_reuniao, id_execucao: idExecucao,
-        id_setor_origem: setor.id_setor, id_pergunta: pergunta.id_pergunta
+        id_huddle: huddle.id_huddle, id_setor_origem: setor.id_setor,
+        id_pergunta: pergunta.id_pergunta
       }, data, hora, sessao));
     });
 
     atualizarPorId("Reunioes", "id_reuniao", reuniao.id_reuniao, {
       total_respondidos: buscarSetoresRespondidos(reuniao.id_reuniao).length
     });
-    auditoria(sessao.usuario.id_usuario, "SALVAR", "setor_reuniao", idExecucao, "SUCESSO", setor.id_setor);
+    auditoria(sessao.usuario.id_usuario, "SALVAR", "setor_reuniao", idExecucao, "SUCESSO", huddle.id_huddle + "|" + setor.id_setor);
     return { sucesso: true, id_execucao: idExecucao };
   });
 }
@@ -582,8 +625,9 @@ function salvarPendenciaInterna(dados, data, hora, sessao) {
 
   appendPorCabecalho("Pendencias", {
     id_pendencia: id, id_reuniao: dados.id_reuniao, id_execucao: dados.id_execucao,
-    id_setor_origem: dados.id_setor_origem, id_pergunta: dados.id_pergunta,
-    titulo: titulo, descricao: descricao, id_categoria: dados.id_categoria || "",
+    id_huddle: dados.id_huddle || "", id_setor_origem: dados.id_setor_origem,
+    id_pergunta: dados.id_pergunta, titulo: titulo, descricao: descricao,
+    id_categoria: dados.id_categoria || "",
     status: "Aberta", data_abertura: data, hora_abertura: hora,
     data_resolucao: "", hora_resolucao: "", resultado_resolucao: "",
     concluida_dentro_prazo: "", houve_problemas: "", apoios_cumpriram: "",
@@ -865,19 +909,23 @@ function reuniaoExistente(id) {
 
 function buscarSetoresRespondidos(id) {
   return [...new Set(lerObjetos("Execucoes_Setor")
-    .filter(x => String(x.id_reuniao) === String(id)).map(x => String(x.id_setor)))];
+    .filter(x => String(x.id_reuniao) === String(id))
+    .map(x => String(x.id_huddle || "") + "|" + String(x.id_setor)))];
 }
 
-function confirmarSetor(idReuniao, idSetor) {
+function confirmarSetor(idReuniao, idHuddle, idSetor) {
   reuniaoExistente(idReuniao);
+  huddleAtivo(idHuddle);
   setorAtivo(idSetor);
-  const id = buscarExecucao(idReuniao, idSetor);
+  const id = buscarExecucao(idReuniao, idHuddle, idSetor);
   return { sucesso: true, confirmado: Boolean(id), id_execucao: id || "" };
 }
 
-function buscarExecucao(idReuniao, idSetor) {
+function buscarExecucao(idReuniao, idHuddle, idSetor) {
   const x = lerObjetos("Execucoes_Setor").find(r =>
-    String(r.id_reuniao) === String(idReuniao) && String(r.id_setor) === String(idSetor));
+    String(r.id_reuniao) === String(idReuniao) &&
+    String(r.id_huddle) === String(idHuddle) &&
+    String(r.id_setor) === String(idSetor));
   return x ? x.id_execucao : null;
 }
 
@@ -905,6 +953,7 @@ function lerAtivos(aba) {
 function lerObjetos(nome) {
   const aba = planilhaAtual().getSheetByName(nome);
   if (!aba) throw new Error("Aba não encontrada: " + nome);
+  garantirCabecalhos(nome, aba);
   if (aba.getLastRow() < 2) return [];
   const dados = aba.getDataRange().getValues();
   const cab = dados.shift().map(x => String(x).trim());
@@ -915,9 +964,31 @@ function lerObjetos(nome) {
   });
 }
 
+function atualizarEstruturaPlanilha() {
+  exigirModoInstalacao();
+  const planilha = planilhaAtual();
+  Object.keys(ABAS).forEach(nome => {
+    const aba = planilha.getSheetByName(nome);
+    if (aba) garantirCabecalhos(nome, aba);
+  });
+}
+
+function garantirCabecalhos(nome, aba) {
+  const esperados = ABAS[nome];
+  if (!esperados || aba.getLastRow() < 1) return;
+  const ultimaColuna = Math.max(aba.getLastColumn(), 1);
+  const atuais = aba.getRange(1, 1, 1, ultimaColuna).getValues()[0].map(x => String(x).trim());
+  const faltantes = esperados.filter(c => !atuais.includes(c));
+  if (!faltantes.length) return;
+  aba.getRange(1, atuais.length + 1, 1, faltantes.length).setValues([faltantes]);
+  aba.getRange(1, 1, 1, atuais.length + faltantes.length)
+    .setFontWeight("bold").setBackground("#0b4776").setFontColor("#ffffff");
+}
+
 function appendPorCabecalho(nome, objeto) {
   const aba = planilhaAtual().getSheetByName(nome);
   if (!aba) throw new Error("Aba não encontrada: " + nome);
+  garantirCabecalhos(nome, aba);
   const cab = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(x => String(x).trim());
   const linha = cab.map(c => valorSeguroCelula(objeto[c] !== undefined ? objeto[c] : ""));
   aba.getRange(aba.getLastRow() + 1, 1, 1, linha.length).setValues([linha]);
@@ -925,6 +996,7 @@ function appendPorCabecalho(nome, objeto) {
 
 function atualizarPorId(nome, coluna, id, dados) {
   const aba = planilhaAtual().getSheetByName(nome);
+  garantirCabecalhos(nome, aba);
   const valores = aba.getDataRange().getValues();
   const cab = valores[0].map(x => String(x).trim());
   const idx = cab.indexOf(coluna);

@@ -79,19 +79,19 @@ Tipos: `TITULO_PENDENCIA` e `MOTIVO_NAO_RESOLUCAO`.
 ### Reunioes
 
 ```text
-id_reuniao | id_huddle | data | hora_inicio | hora_fim | id_usuario | status | total_setores | total_respondidos
+id_reuniao | data | hora_inicio | hora_fim | id_usuario | status | total_setores | total_respondidos
 ```
 
 ### Presencas_Setor
 
 ```text
-id_presenca | id_reuniao | id_setor | presente | observacao
+id_presenca | id_reuniao | id_huddle | id_setor | presente | observacao
 ```
 
 ### Execucoes_Setor
 
 ```text
-id_execucao | id_reuniao | id_setor | id_usuario_resposta | data | hora | status
+id_execucao | id_reuniao | id_huddle | id_setor | id_usuario_resposta | data | hora | status
 ```
 
 ### Respostas
@@ -103,7 +103,7 @@ id_resposta | id_execucao | id_reuniao | id_setor | id_pergunta | resposta | com
 ### Pendencias
 
 ```text
-id_pendencia | id_reuniao | id_execucao | id_setor_origem | id_pergunta | titulo | descricao | id_categoria | status | data_abertura | hora_abertura | data_resolucao | hora_resolucao | resultado_resolucao | concluida_dentro_prazo | houve_problemas | apoios_cumpriram | motivo_nao_resolucao | observacao_resolucao
+id_pendencia | id_reuniao | id_execucao | id_huddle | id_setor_origem | id_pergunta | titulo | descricao | id_categoria | status | data_abertura | hora_abertura | data_resolucao | hora_resolucao | resultado_resolucao | concluida_dentro_prazo | houve_problemas | apoios_cumpriram | motivo_nao_resolucao | observacao_resolucao
 ```
 
 ### Pendencia_Apoios

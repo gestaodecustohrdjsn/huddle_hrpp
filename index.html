@@ -61,53 +61,15 @@
     </section>
 
     <section id="tela-nova-reuniao" class="tela hidden">
-      <h2>Iniciar nova reunião</h2>
-      <div>
-        <label for="select-huddle">Huddle</label>
-        <select id="select-huddle"></select>
-      </div>
-      <h3>Setores representados</h3>
-      <p class="texto-apoio">Marque os setores presentes. Todos continuarão disponíveis na pauta.</p>
-      <div id="lista-presenca" class="lista-checks"></div>
+      <h2>Iniciar nova reuni?o</h2>
+      <p class="texto-apoio">Selecione os Huddles que far?o parte desta reuni?o e marque os setores presentes em cada momento.</p>
+      <div id="lista-huddles-presenca" class="lista-huddles-presenca"></div>
       <div class="acoes">
         <button class="btn-secundario" type="button" data-action="abrir-inicio">Cancelar</button>
-        <button class="btn-principal" type="button" data-action="iniciar-reuniao">Iniciar reunião</button>
+        <button class="btn-principal" type="button" data-action="iniciar-reuniao">Iniciar reuni?o</button>
       </div>
     </section>
 
-    <section id="tela-setores" class="tela hidden">
-      <div class="barra-info"><span id="info-reuniao"></span><span id="info-usuario"></span></div>
-      <div class="titulo-com-acao">
-        <div><h2>Setores do Huddle</h2><p class="texto-apoio">Selecione um setor para responder.</p></div>
-        <span id="progresso-setores" class="tag-status"></span>
-      </div>
-      <div id="lista-setores" class="lista-setores"></div>
-      <div class="acoes">
-        <button class="btn-secundario" type="button" data-action="abrir-inicio">Voltar às reuniões</button>
-        <button id="btn-finalizar-reuniao" class="btn-principal hidden" type="button" data-action="finalizar-reuniao">Finalizar reunião</button>
-      </div>
-    </section>
-
-    <section id="tela-pergunta" class="tela hidden">
-      <div class="barra-info"><span id="info-contexto"></span><span id="contador-pergunta"></span></div>
-      <h2 id="texto-pergunta"></h2>
-      <div id="area-resposta"></div>
-      <div id="area-pendencias"></div>
-      <div class="acoes">
-        <button id="btn-voltar-pergunta" class="btn-secundario" type="button" data-action="voltar-pergunta">Voltar</button>
-        <button id="btn-continuar-pergunta" class="btn-principal" type="button" data-action="continuar-pergunta">Continuar</button>
-      </div>
-    </section>
-
-    <section id="tela-revisao" class="tela hidden">
-      <h2>Revisar setor</h2>
-      <p class="texto-apoio">Confira respostas e pendências antes de concluir.</p>
-      <div id="resumo-respostas" class="resumo-respostas"></div>
-      <div class="acoes">
-        <button class="btn-secundario" type="button" data-action="voltar-revisao">Voltar e corrigir</button>
-        <button class="btn-principal" type="button" data-action="salvar-setor">Salvar setor</button>
-      </div>
-    </section>
 
     <section id="tela-detalhe-reuniao" class="tela hidden">
       <div class="titulo-com-acao">

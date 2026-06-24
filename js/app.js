@@ -14,7 +14,10 @@ const estado = {
   respostaTemporaria: "",
   resolucaoEdicao: null,
   abaConfig: "usuarios",
-  edicao: null
+  edicao: null,
+  huddlesNovaReuniao: {},
+  presencasNovaReuniao: {},
+  ordenacaoPauta: "huddle"
 };
 
 let carregando = false;
@@ -66,9 +69,11 @@ async function tratarClique(evento) {
       "abrir-configuracoes": abrirConfiguracoes,
       "logout": logout,
       "iniciar-reuniao": iniciarReuniao,
+      "toggle-huddle-reuniao": () => toggleHuddleNovaReuniao(id),
+      "ordenar-pauta": () => ordenarPauta(value),
       "abrir-reuniao": () => abrirDetalheReuniao(id),
       "retomar-reuniao": retomarReuniao,
-      "selecionar-setor": () => selecionarSetor(id),
+      "selecionar-setor": () => selecionarSetor(elemento.dataset.huddle, id),
       "finalizar-reuniao": finalizarReuniao,
       "selecionar-resposta": () => selecionarResposta(value),
       "voltar-pergunta": voltarPergunta,
@@ -110,7 +115,8 @@ async function tratarSubmit(evento) {
 }
 
 function tratarChange(evento) {
-  if (evento.target.id === "select-huddle") renderizarPresencaSetores();
+  if (evento.target.matches('input[name="huddle-reuniao"]')) alterarSelecaoHuddle(evento.target);
+  if (evento.target.matches('input[name="presenca-setor"]')) alterarPresencaSetor(evento.target);
   if (evento.target.id === "resolucao-resultado") atualizarCamposResolucao();
   if (evento.target.id === "cfg-pergunta-setor-filtro") carregarPerguntasConfig().catch(tratarErro);
 }
@@ -290,62 +296,110 @@ function tratarErro(erro) {
 
 function renderizarReunioes() {
   $("lista-reunioes").innerHTML = estado.dados.reunioes.length
-    ? estado.dados.reunioes.map(r => `
-      <article class="card-reuniao">
+    ? estado.dados.reunioes.map(r => {
+      const nomesHuddles = (r.huddles || []).map(h => h.nome_huddle).filter(Boolean).join(", ") || "Reunião";
+      return `<article class="card-reuniao">
         <button class="card-botao" type="button" data-action="abrir-reuniao" data-id="${atributo(r.id_reuniao)}">
           <div class="card-cabecalho">
             <div>
               <span class="card-data">${escapar(r.data)} · ${escapar(r.hora_inicio)}</span>
-              <h3>${escapar(r.huddle?.nome_huddle || "Huddle")} — ${escapar(r.usuario?.nome || "")}</h3>
+              <h3>${escapar(nomesHuddles)} — ${escapar(r.usuario?.nome || "")}</h3>
             </div>
             <span class="tag-status ${r.status === "Em Andamento" ? "tag-andamento" : "tag-respondido"}">${escapar(r.status)}</span>
           </div>
           <div class="metricas-card">
-            <span><strong>${Number(r.total_respondidos)}</strong>/${Number(r.total_setores)} setores</span>
+            <span><strong>${Number(r.total_respondidos)}</strong>/${Number(r.total_setores)} momentos/setores</span>
             <span><strong>${Number(r.pendencias_abertas)}</strong> pendências abertas</span>
           </div>
         </button>
-      </article>`).join("")
-    : `<div class="estado-vazio"><h3>Nenhuma reunião</h3><p>Cadastre setores e um Huddle para começar.</p></div>`;
+      </article>`;
+    }).join("")
+    : `<div class="estado-vazio"><h3>Nenhuma reunião</h3><p>Cadastre setores e Huddles para começar.</p></div>`;
 }
 
 function abrirNovaReuniao() {
-  if (!estado.dados.huddles.some(h => h.setores?.length)) {
+  const huddles = estado.dados.huddles.filter(h => h.setores?.length);
+  if (!huddles.length) {
     return alert("Nenhum Huddle possui setores cadastrados.");
   }
-  $("select-huddle").innerHTML = `<option value="">Selecione</option>` +
-    estado.dados.huddles.filter(h => h.setores?.length)
-      .map(h => `<option value="${atributo(h.id_huddle)}">${escapar(h.nome_huddle)}</option>`).join("");
-  $("lista-presenca").innerHTML = `<div class="estado-vazio"><p>Selecione um Huddle.</p></div>`;
+  estado.huddlesNovaReuniao = {};
+  estado.presencasNovaReuniao = {};
+  huddles.forEach((h, i) => {
+    estado.huddlesNovaReuniao[h.id_huddle] = { selecionado: false, expandido: i === 0 };
+  });
+  renderizarHuddlesNovaReuniao();
   mostrarTela("tela-nova-reuniao");
 }
 
-function renderizarPresencaSetores() {
-  const huddle = huddlePorId($("select-huddle").value);
-  $("lista-presenca").innerHTML = huddle
-    ? huddle.setores.map(s => `
-      <label class="check-card">
-        <input type="checkbox" name="presenca-setor" value="${atributo(s.id_setor)}">
-        <span><strong>${escapar(s.nome_setor)}</strong><small>${escapar(s.classificacao || "")}</small></span>
-      </label>`).join("")
-    : `<div class="estado-vazio"><p>Selecione um Huddle.</p></div>`;
+function renderizarHuddlesNovaReuniao() {
+  const huddles = estado.dados.huddles.filter(h => h.setores?.length);
+  $("lista-huddles-presenca").innerHTML = huddles.map(h => {
+    const ui = estado.huddlesNovaReuniao[h.id_huddle] || { selecionado: false, expandido: false };
+    return `<article class="card-huddle-presenca ${ui.selecionado ? "selecionado" : ""}">
+      <div class="card-cabecalho card-huddle-topo">
+        <label class="check-huddle">
+          <input type="checkbox" name="huddle-reuniao" value="${atributo(h.id_huddle)}" ${ui.selecionado ? "checked" : ""}>
+          <span><strong>${escapar(h.nome_huddle)}</strong><small>${h.setores.length} setores vinculados</small></span>
+        </label>
+        <button class="btn-secundario btn-menor" type="button" data-action="toggle-huddle-reuniao" data-id="${atributo(h.id_huddle)}">
+          ${ui.expandido ? "Recolher" : "Expandir"}
+        </button>
+      </div>
+      <div class="lista-checks ${ui.expandido ? "" : "hidden"}">
+        ${h.setores.map(s => `
+          <label class="check-card">
+            <input type="checkbox" name="presenca-setor" data-huddle="${atributo(h.id_huddle)}" value="${atributo(s.id_setor)}" ${presencaSelecionada(h.id_huddle, s.id_setor) ? "checked" : ""} ${ui.selecionado ? "" : "disabled"}>
+            <span><strong>${escapar(s.nome_setor)}</strong><small>${escapar(s.classificacao || "")}</small></span>
+          </label>`).join("")}
+      </div>
+    </article>`;
+  }).join("");
+}
+
+function alterarSelecaoHuddle(input) {
+  const id = input.value;
+  estado.huddlesNovaReuniao[id] = estado.huddlesNovaReuniao[id] || { selecionado: false, expandido: true };
+  estado.huddlesNovaReuniao[id].selecionado = input.checked;
+  estado.huddlesNovaReuniao[id].expandido = true;
+  if (!input.checked) estado.presencasNovaReuniao[id] = new Set();
+  renderizarHuddlesNovaReuniao();
+}
+
+function alterarPresencaSetor(input) {
+  const idHuddle = input.dataset.huddle;
+  estado.presencasNovaReuniao[idHuddle] = estado.presencasNovaReuniao[idHuddle] || new Set();
+  if (input.checked) estado.presencasNovaReuniao[idHuddle].add(input.value);
+  else estado.presencasNovaReuniao[idHuddle].delete(input.value);
+}
+
+function presencaSelecionada(idHuddle, idSetor) {
+  return Boolean(estado.presencasNovaReuniao[idHuddle]?.has(String(idSetor)));
+}
+
+function toggleHuddleNovaReuniao(id) {
+  estado.huddlesNovaReuniao[id] = estado.huddlesNovaReuniao[id] || { selecionado: false, expandido: false };
+  estado.huddlesNovaReuniao[id].expandido = !estado.huddlesNovaReuniao[id].expandido;
+  renderizarHuddlesNovaReuniao();
 }
 
 async function iniciarReuniao() {
-  const idHuddle = $("select-huddle").value;
-  if (!idHuddle) return alert("Selecione o Huddle.");
-  const idReuniao = gerarIdCliente("REU");
-  const presentes = [...document.querySelectorAll('input[name="presenca-setor"]:checked')].map(x => x.value);
+  const selecionados = estado.dados.huddles
+    .filter(h => estado.huddlesNovaReuniao[h.id_huddle]?.selecionado)
+    .map(h => ({
+      id_huddle: h.id_huddle,
+      setores_presentes: [...(estado.presencasNovaReuniao[h.id_huddle] || new Set())]
+    }));
+  if (!selecionados.length) return alert("Selecione ao menos um Huddle.");
 
+  const idReuniao = gerarIdCliente("REU");
   await executarComLoading("Iniciando reunião...", async () => {
     await apiPost({
       action: "criarReuniao",
       id_reuniao: idReuniao,
-      id_huddle: idHuddle,
-      setores_presentes: presentes
+      huddles: selecionados
     });
     const reuniao = await aguardarReuniao(idReuniao);
-    estado.reuniao = { ...reuniao, setores_respondidos: [] };
+    estado.reuniao = reuniao;
     await carregarBootstrap(false);
     mostrarSetores();
   });
@@ -371,13 +425,14 @@ async function abrirDetalheReuniao(id) {
 
 function renderizarDetalhe() {
   const r = estado.reuniao;
-  $("detalhe-titulo").textContent = `${r.huddle?.nome_huddle || "Huddle"} — ${r.data}`;
+  const nomesHuddles = (r.huddles || []).map(h => h.nome_huddle).filter(Boolean).join(", ") || "Reunião";
+  $("detalhe-titulo").textContent = `${nomesHuddles} — ${r.data}`;
   $("detalhe-subtitulo").textContent =
     `${r.hora_inicio}${r.hora_fim ? " às " + r.hora_fim : ""} · ${r.usuario?.nome || ""} · ${r.status}`;
   $("btn-retomar-reuniao").classList.toggle("hidden", r.status !== "Em Andamento");
   const presentes = r.presencas.filter(p => estaSim(p.presente));
   $("detalhe-presencas").innerHTML = presentes.length
-    ? presentes.map(p => `<span class="chip">${escapar(p.setor?.nome_setor || "")}</span>`).join("")
+    ? presentes.map(p => `<span class="chip">${escapar(p.huddle?.nome_huddle || "Huddle")} · ${escapar(p.setor?.nome_setor || "")}</span>`).join("")
     : `<span class="texto-apoio">Nenhum setor marcado como presente.</span>`;
   $("detalhe-pendencias").innerHTML = r.pendencias.length
     ? r.pendencias.map(renderCardPendencia).join("")
@@ -388,7 +443,7 @@ function renderCardPendencia(p) {
   const aberta = p.status === "Aberta";
   return `<article class="card-pendencia">
     <div class="card-cabecalho">
-      <div><span class="card-data">${escapar(p.setor_origem?.nome_setor || "")}</span><h3>${escapar(p.titulo)}</h3></div>
+      <div><span class="card-data">${escapar(p.huddle?.nome_huddle || "Huddle")} · ${escapar(p.setor_origem?.nome_setor || "")}</span><h3>${escapar(p.titulo)}</h3></div>
       <span class="tag-status ${aberta ? "tag-pendencia" : "tag-respondido"}">${escapar(p.status)}</span>
     </div>
     ${p.descricao ? `<p>${escapar(p.descricao)}</p>` : ""}
@@ -402,23 +457,57 @@ function retomarReuniao() {
 }
 
 function mostrarSetores() {
-  const setores = estado.reuniao.huddle?.setores || [];
+  const itens = itensPautaOrdenados();
   const respondidos = new Set((estado.reuniao.setores_respondidos || []).map(String));
   $("info-reuniao").textContent =
-    `${estado.reuniao.huddle?.nome_huddle || ""} · ${estado.reuniao.data} · ${estado.reuniao.id_reuniao}`;
+    `${(estado.reuniao.huddles || []).length} Huddle(s) · ${estado.reuniao.data} · ${estado.reuniao.id_reuniao}`;
   $("info-usuario").textContent = estado.usuario.nome;
-  $("progresso-setores").textContent = `${respondidos.size} de ${setores.length}`;
-  $("lista-setores").innerHTML = setores.map(s => {
-    const respondido = respondidos.has(String(s.id_setor));
-    return `<button class="item-setor ${respondido ? "respondido" : ""}" type="button"
-      data-action="selecionar-setor" data-id="${atributo(s.id_setor)}" ${respondido ? "disabled" : ""}>
-      <span><strong>${escapar(s.nome_setor)}</strong><small>${escapar(s.classificacao || "")}</small></span>
-      <span class="tag-status ${respondido ? "tag-respondido" : "tag-aguardando"}">${respondido ? "Respondido" : "Aguardando resposta"}</span>
-    </button>`;
-  }).join("");
+  $("progresso-setores").textContent = `${respondidos.size} de ${itens.length}`;
+  $("lista-setores").innerHTML = `
+    <div class="barra-ordenacao">
+      <span>Ordenar por:</span>
+      <button class="btn-link ${estado.ordenacaoPauta === "huddle" ? "ativo" : ""}" type="button" data-action="ordenar-pauta" data-value="huddle">Huddle</button>
+      <button class="btn-link ${estado.ordenacaoPauta === "setor" ? "ativo" : ""}" type="button" data-action="ordenar-pauta" data-value="setor">Setor</button>
+    </div>
+    <div class="tabela-pauta">
+      <div class="linha-pauta cabecalho"><span>Setor</span><span>Huddle</span><span>Status</span></div>
+      ${itens.map(item => {
+        const chave = chavePauta(item.id_huddle, item.id_setor);
+        const respondido = respondidos.has(chave);
+        return `<button class="linha-pauta item-setor ${respondido ? "respondido" : ""}" type="button"
+          data-action="selecionar-setor" data-huddle="${atributo(item.id_huddle)}" data-id="${atributo(item.id_setor)}" ${respondido ? "disabled" : ""}>
+          <span><strong>${escapar(item.setor?.nome_setor || "")}</strong><small>${escapar(item.setor?.classificacao || "")}</small></span>
+          <span>${escapar(item.huddle?.nome_huddle || "Huddle")}</span>
+          <span class="tag-status ${respondido ? "tag-respondido" : "tag-aguardando"}">${respondido ? "Respondido" : "Aguardando resposta"}</span>
+        </button>`;
+      }).join("")}
+    </div>`;
   $("btn-finalizar-reuniao").classList.toggle("hidden",
-    !setores.length || respondidos.size !== setores.length);
+    !itens.length || respondidos.size !== itens.length);
   mostrarTela("tela-setores");
+}
+
+function itensPautaOrdenados() {
+  const itens = [...(estado.reuniao.itens_pauta || estado.reuniao.presencas || [])]
+    .filter(x => x.setor && x.huddle);
+  return itens.sort((a, b) => {
+    const ah = a.huddle?.nome_huddle || "";
+    const bh = b.huddle?.nome_huddle || "";
+    const setorA = a.setor?.nome_setor || "";
+    const setorB = b.setor?.nome_setor || "";
+    return estado.ordenacaoPauta === "setor"
+      ? setorA.localeCompare(setorB) || ah.localeCompare(bh)
+      : ah.localeCompare(bh) || setorA.localeCompare(setorB);
+  });
+}
+
+function ordenarPauta(valor) {
+  estado.ordenacaoPauta = valor === "setor" ? "setor" : "huddle";
+  mostrarSetores();
+}
+
+function chavePauta(idHuddle, idSetor) {
+  return String(idHuddle || "") + "|" + String(idSetor || "");
 }
 
 async function finalizarReuniao() {
@@ -433,12 +522,13 @@ async function finalizarReuniao() {
 
 /* PERGUNTAS E PENDÊNCIAS */
 
-async function selecionarSetor(id) {
-  estado.setor = setorPorId(id);
+async function selecionarSetor(idHuddle, idSetor) {
+  estado.huddle = huddlePorId(idHuddle);
+  estado.setor = setorPorId(idSetor);
   estado.indice = 0;
   estado.respostas = [];
   await executarComLoading("Carregando perguntas...", async () => {
-    estado.perguntas = await apiGet({ action: "perguntas", id_setor: id });
+    estado.perguntas = await apiGet({ action: "perguntas", id_setor: idSetor });
     if (!estado.perguntas.length) throw criarErro("SEM_PERGUNTAS", "Este setor não possui perguntas.");
     mostrarPergunta();
   });
@@ -448,7 +538,7 @@ function mostrarPergunta() {
   const p = estado.perguntas[estado.indice];
   const salva = estado.respostas.find(r => r.id_pergunta === p.id_pergunta);
   estado.respostaTemporaria = salva?.resposta || "";
-  $("info-contexto").textContent = `${estado.setor.nome_setor} · ${estado.reuniao.id_reuniao}`;
+  $("info-contexto").textContent = `${estado.huddle?.nome_huddle || "Huddle"} · ${estado.setor.nome_setor} · ${estado.reuniao.id_reuniao}`;
   $("contador-pergunta").textContent = `Pergunta ${estado.indice + 1} de ${estado.perguntas.length}`;
   $("texto-pergunta").textContent = p.pergunta;
   $("btn-voltar-pergunta").textContent = estado.indice ? "Voltar" : "Voltar para setores";
@@ -575,6 +665,7 @@ async function salvarSetor() {
     await apiPost({
       action: "salvarSetor",
       id_reuniao: estado.reuniao.id_reuniao,
+      id_huddle: estado.huddle.id_huddle,
       id_setor: id,
       respostas: estado.respostas
     });
@@ -584,12 +675,13 @@ async function salvarSetor() {
       const retorno = await apiGet({
         action: "confirmarSetor",
         id_reuniao: estado.reuniao.id_reuniao,
+        id_huddle: estado.huddle.id_huddle,
         id_setor: id
       });
       confirmado = retorno.confirmado;
     }
     if (!confirmado) throw criarErro("CONFIRMACAO_FALHOU", "Não foi possível confirmar a gravação.");
-    estado.reuniao.setores_respondidos.push(String(id));
+    estado.reuniao.setores_respondidos.push(chavePauta(estado.huddle.id_huddle, id));
     await carregarBootstrap(false);
     mostrarSetores();
   });
@@ -1045,6 +1137,11 @@ function sugestoes(tipo) {
   return estado.dados.sugestoes
     .filter(s => normalizar(s.tipo) === normalizar(tipo))
     .map(s => `<option value="${atributo(s.valor)}"></option>`).join("");
+}
+
+function cssEscape(valor) {
+  if (window.CSS?.escape) return CSS.escape(String(valor));
+  return String(valor).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 }
 
 function escapar(valor) {
