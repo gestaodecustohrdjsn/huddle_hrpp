@@ -508,46 +508,63 @@ button:disabled {
   color: var(--texto);
 }
 
-.tipo-presenca {
-  display: flex;
-  gap: 6px;
-  background: var(--cinza);
-  padding: 4px;
-  border-radius: 999px;
-  border: 1px solid var(--cinza-borda);
+/* =========================
+   SELEÇÃO DE PRESENÇA POR SETOR - VERSÃO LISTA
+========================= */
+
+.item-setor-presenca {
+  display: grid;
+  grid-template-columns: 28px 1fr 180px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cinza-borda);
+  background: white;
+  transition: 0.18s ease;
 }
 
-.radio-chip {
-  position: relative;
+.item-setor-presenca:last-child {
+  border-bottom: none;
+}
+
+.item-setor-presenca:hover {
+  background: var(--cinza-2);
+}
+
+.item-setor-presenca.selecionado {
+  background: #ffffff;
+}
+
+.item-setor-presenca.nao-selecionado {
+  opacity: 0.82;
+}
+
+.item-setor-presenca .check-setor {
+  width: 22px;
+  height: 22px;
+  margin: 0;
   cursor: pointer;
 }
 
-.radio-chip input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
+.nome-setor-presenca {
+  font-weight: 700;
+  color: var(--texto);
+  line-height: 1.3;
 }
 
-.radio-chip span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 11px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: #555;
-  background: transparent;
-  white-space: nowrap;
+.select-tipo-presenca {
+  width: 100%;
+  min-width: 160px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: white;
 }
 
-.radio-chip input:checked + span {
-  background: var(--turquesa);
-  color: white;
-}
-
-.radio-chip input:disabled + span {
-  opacity: 0.45;
+.select-tipo-presenca:disabled {
+  background: #f1f5f9;
+  color: #999;
 }
 
 .tag-presenca {
@@ -557,14 +574,12 @@ button:disabled {
 
 @media (max-width: 700px) {
   .item-setor-presenca {
-    grid-template-columns: 32px 1fr;
-    align-items: flex-start;
+    grid-template-columns: 28px 1fr;
+    gap: 10px 12px;
   }
 
-  .tipo-presenca {
+  .select-tipo-presenca {
     grid-column: 2 / 3;
-    width: fit-content;
-    margin-top: 4px;
+    max-width: 220px;
   }
-}
 }
