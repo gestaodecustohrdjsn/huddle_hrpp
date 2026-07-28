@@ -5,9 +5,7 @@ Huddle.App = {
     try {
       await Huddle.DB.abrir();
       await Huddle.Seed.run();
-
       await Huddle.Reunioes.renderHome();
-
     } catch (erro) {
       console.error(erro);
 
@@ -21,6 +19,6 @@ Huddle.App = {
   }
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", () => {
   Huddle.App.iniciar();
 });

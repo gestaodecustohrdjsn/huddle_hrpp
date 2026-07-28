@@ -11,7 +11,6 @@ Huddle.DB = {
 
       request.onupgradeneeded = event => {
         const db = event.target.result;
-
         this.criarStores(db);
       };
 
