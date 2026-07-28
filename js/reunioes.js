@@ -673,6 +673,7 @@ Huddle.Reunioes = {
     const setoresDaReuniao = await this.obterSetoresDaReuniao(idReuniao);
     const perguntas = await Huddle.Perguntas.obterPerguntasSetor(idSetor);
     const respostas = await Huddle.Perguntas.obterRespostasSetor(idReuniao, idSetor);
+    const pendenciasAbertas = await Huddle.Perguntas.obterPendenciasAbertasSetor(idSetor);
 
     const relacao = setoresDaReuniao.find(r =>
       r.id_reuniao === idReuniao &&
@@ -691,7 +692,7 @@ Huddle.Reunioes = {
           <div>
             <h2>${Huddle.Utils.escapeHtml(setor.nome)}</h2>
             <p class="texto-apoio">
-              Revise o setor, responda as perguntas e registre observações quando necessário.
+              Revise as pendências do setor e depois inicie as perguntas.
             </p>
           </div>
         </div>
@@ -704,41 +705,29 @@ Huddle.Reunioes = {
           <div><strong>Perguntas:</strong> ${totalRespondidas}/${perguntas.length} respondida(s)</div>
         </div>
 
-        <div class="card card-destaque">
-          <h3>Perguntas do setor</h3>
+        <div class="card card-pendencias-setor">
+          <div class="card-titulo-linha">
+            <h3>Pendências do setor</h3>
+            <span class="tag tag-pendencias">${pendenciasAbertas.length} aberta(s)</span>
+          </div>
 
-          <p>
-            As perguntas aparecem em modo carrossel, com barra de progresso. Toda resposta possui campo de observação.
-          </p>
+          ${await Huddle.Perguntas.renderListaPendenciasSetor(pendenciasAbertas)}
+        </div>
 
+        <div class="card card-iniciar-perguntas">
           ${perguntas.length ? `
-            <div class="acoes">
-              <button class="btn-principal" onclick="Huddle.Perguntas.iniciar('${idReuniao}', '${idSetor}', 0)">
-                ${respostas.length ? "Continuar / editar perguntas" : "Iniciar perguntas"}
-              </button>
+            <button class="btn-principal btn-largo" onclick="Huddle.Perguntas.iniciar('${idReuniao}', '${idSetor}', 0)">
+              ${respostas.length ? "Continuar / editar perguntas" : "Iniciar perguntas"}
+            </button>
 
-              ${respostas.length ? `
-                <button class="btn-claro" onclick="Huddle.Perguntas.renderRevisaoSetor('${idReuniao}', '${idSetor}')">
-                  Revisar respostas
-                </button>
-              ` : ""}
-            </div>
+            ${respostas.length ? `
+              <button class="btn-claro btn-largo" onclick="Huddle.Perguntas.renderRevisaoSetor('${idReuniao}', '${idSetor}')">
+                Revisar respostas
+              </button>
+            ` : ""}
           ` : `
             <p class="texto-apoio">Este setor ainda não possui perguntas cadastradas.</p>
           `}
-        </div>
-
-        <div class="card">
-          <h3>Pendências do setor</h3>
-          <p>
-            Na próxima etapa, esta área vai exibir as pendências abertas acumuladas do setor antes das perguntas.
-          </p>
-
-          <div class="acoes">
-            <button class="btn-secundario" disabled>
-              Em breve
-            </button>
-          </div>
         </div>
 
         <div class="acoes">

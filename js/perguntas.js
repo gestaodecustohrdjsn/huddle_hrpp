@@ -50,6 +50,105 @@ Huddle.Perguntas = {
     await this.renderPergunta(idReuniao, idSetor, indiceSeguro);
   },
 
+  async obterPendenciasAbertasSetor(idSetor) {
+    const pendencias = await Huddle.DB.getAll("pendencias");
+
+    const abertas = pendencias.filter(pendencia =>
+      pendencia.id_setor === idSetor &&
+      pendencia.status === "Aberta" &&
+      pendencia.removida !== true
+    );
+
+    return abertas.sort((a, b) => this.calcularCriticidadePendencia(a) - this.calcularCriticidadePendencia(b));
+  },
+
+  async obterPendenciasPergunta(idReuniao, idSetor, idPergunta) {
+    const pendencias = await Huddle.DB.getAll("pendencias");
+
+    return pendencias
+      .filter(pendencia =>
+        pendencia.id_reuniao_origem === idReuniao &&
+        pendencia.id_setor === idSetor &&
+        pendencia.id_pergunta === idPergunta &&
+        pendencia.removida !== true
+      )
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  },
+
+  calcularCriticidadePendencia(pendencia) {
+    if (!pendencia.prazo_data) return 999999999;
+
+    const agora = new Date();
+    const prazo = new Date(pendencia.prazo_data);
+    const diferenca = prazo.getTime() - agora.getTime();
+
+    if (diferenca < 0) return -999999999;
+
+    return diferenca;
+  },
+
+  async renderListaPendenciasSetor(pendencias) {
+    if (!pendencias.length) {
+      return `
+        <div class="sem-pendencias">
+          Sem Pendências
+        </div>
+      `;
+    }
+
+    const reunioes = await Huddle.DB.getAll("reunioes");
+    const perguntas = await Huddle.DB.getAll("perguntas");
+
+    return `
+      <div class="lista-pendencias-setor">
+        ${pendencias.map(pendencia => {
+          const reuniaoOrigem = reunioes.find(r => r.id === pendencia.id_reuniao_origem);
+          const perguntaOrigem = perguntas.find(p => p.id === pendencia.id_pergunta);
+          const textoReuniao = reuniaoOrigem
+            ? `Reunião do dia ${reuniaoOrigem.data} às ${reuniaoOrigem.hora_inicio}`
+            : "Reunião não localizada";
+
+          return `
+            <div class="pendencia-setor-item">
+              <strong>${Huddle.Utils.escapeHtml(pendencia.descricao)}</strong>
+              <span>${Huddle.Utils.escapeHtml(textoReuniao)}</span>
+              ${perguntaOrigem ? `<small>${Huddle.Utils.escapeHtml(perguntaOrigem.texto)}</small>` : ""}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  },
+
+  renderCardsPendenciasPergunta(pendencias) {
+    if (!pendencias.length) {
+      return `<div id="pendencias_pergunta" class="lista-pendencias-pergunta hidden"></div>`;
+    }
+
+    return `
+      <div id="pendencias_pergunta" class="lista-pendencias-pergunta">
+        ${pendencias.map((pendencia, index) => `
+          <div class="card-pendencia-pergunta">
+            <div class="card-pendencia-topo">
+              <strong>Pendência ${index + 1}</strong>
+              <span class="tag tag-pendencia-card">Aberta</span>
+            </div>
+
+            <p>${Huddle.Utils.escapeHtml(pendencia.descricao)}</p>
+
+            ${pendencia.observacao ? `
+              <small>${Huddle.Utils.escapeHtml(pendencia.observacao)}</small>
+            ` : ""}
+
+            ${pendencia.prazo_texto ? `
+              <div class="prazo-pendencia-card">Prazo: ${Huddle.Utils.escapeHtml(pendencia.prazo_texto)}</div>
+            ` : ""}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  },
+
   async renderPergunta(idReuniao, idSetor, indice) {
     const reuniao = await Huddle.DB.get("reunioes", idReuniao);
     const setor = await Huddle.DB.get("setores", idSetor);
@@ -64,6 +163,7 @@ Huddle.Perguntas = {
 
     const respostaAtual = await this.obterResposta(idReuniao, idSetor, pergunta.id);
     const opcoes = await this.obterOpcoesPergunta(pergunta.id);
+    const pendenciasPergunta = await this.obterPendenciasPergunta(idReuniao, idSetor, pergunta.id);
     const total = perguntas.length;
     const numero = indice + 1;
     const percentual = Math.round((numero / total) * 100);
@@ -85,9 +185,15 @@ Huddle.Perguntas = {
         </div>
 
         <form class="card card-pergunta" onsubmit="Huddle.Perguntas.avancar(event, '${idReuniao}', '${idSetor}', ${indice})">
-          <div class="pergunta-meta">
+          <div class="pergunta-meta pergunta-meta-acoes">
             <span>Pergunta ${numero}</span>
-            <span>${Huddle.Utils.escapeHtml(pergunta.tipo)}</span>
+            <button
+              type="button"
+              class="btn-pendencia-topo"
+              onclick="Huddle.Perguntas.abrirModalPendencia('${idReuniao}', '${idSetor}', '${pergunta.id}', ${indice})"
+            >
+              Adicionar Pendência
+            </button>
           </div>
 
           <h3 class="texto-pergunta">${Huddle.Utils.escapeHtml(pergunta.texto)}</h3>
@@ -103,16 +209,7 @@ Huddle.Perguntas = {
             >${Huddle.Utils.escapeHtml(respostaAtual?.observacao || "")}</textarea>
           </div>
 
-          <div class="box-pendencia-em-breve">
-            <div>
-              <strong>Pendência vinculada à pergunta</strong>
-              <p>Na próxima etapa, este botão permitirá adicionar quantas pendências forem necessárias para esta pergunta.</p>
-            </div>
-
-            <button type="button" class="btn-claro" disabled>
-              Adicionar pendência
-            </button>
-          </div>
+          ${this.renderCardsPendenciasPergunta(pendenciasPergunta)}
 
           <div class="acoes acoes-pergunta">
             <button type="button" class="btn-secundario" onclick="Huddle.Perguntas.voltar('${idReuniao}', '${idSetor}', ${indice})">
@@ -125,6 +222,72 @@ Huddle.Perguntas = {
           </div>
         </form>
 
+        ${this.renderModalPendencia(idReuniao, idSetor, pergunta.id, indice)}
+
+      </div>
+    `;
+  },
+
+  renderModalPendencia(idReuniao, idSetor, idPergunta, indice) {
+    return `
+      <div id="modal_pendencia" class="modal-pendencia hidden">
+        <div class="modal-pendencia-card">
+          <div class="modal-pendencia-topo">
+            <h3>Adicionar pendência</h3>
+            <button type="button" class="btn-fechar-modal" onclick="Huddle.Perguntas.fecharModalPendencia()">×</button>
+          </div>
+
+          <form onsubmit="Huddle.Perguntas.salvarPendencia(event, '${idReuniao}', '${idSetor}', '${idPergunta}', ${indice})">
+            <div class="form-linha">
+              <label for="pendencia_descricao">Descrição da pendência</label>
+              <textarea
+                id="pendencia_descricao"
+                rows="3"
+                placeholder="Descreva a pendência identificada..."
+                required
+              ></textarea>
+            </div>
+
+            <div class="form-linha">
+              <label for="pendencia_observacao">Observação</label>
+              <textarea
+                id="pendencia_observacao"
+                rows="3"
+                placeholder="Detalhe a situação, se necessário..."
+              ></textarea>
+            </div>
+
+            <div class="form-linha">
+              <label for="pendencia_prazo_tipo">Tempo para resolução</label>
+              <select id="pendencia_prazo_tipo" onchange="Huddle.Perguntas.atualizarCamposPrazoPendencia()">
+                <option value="24H">24 horas</option>
+                <option value="DIAS">Quantidade de dias</option>
+                <option value="DATA">Data final</option>
+                <option value="SEM_PRAZO">Sem prazo definido</option>
+              </select>
+            </div>
+
+            <div id="campo_prazo_dias" class="form-linha hidden">
+              <label for="pendencia_prazo_dias">Quantidade de dias</label>
+              <input id="pendencia_prazo_dias" type="number" min="1" step="1" placeholder="Ex.: 3">
+            </div>
+
+            <div id="campo_prazo_data" class="form-linha hidden">
+              <label for="pendencia_prazo_data">Data final</label>
+              <input id="pendencia_prazo_data" type="date">
+            </div>
+
+            <div class="acoes acoes-modal">
+              <button type="button" class="btn-secundario" onclick="Huddle.Perguntas.fecharModalPendencia()">
+                Cancelar
+              </button>
+
+              <button type="submit" class="btn-principal">
+                Salvar pendência
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     `;
   },
@@ -450,6 +613,183 @@ Huddle.Perguntas = {
     }
 
     await Huddle.Reunioes.renderReuniao(idReuniao);
+  },
+
+  abrirModalPendencia(idReuniao, idSetor, idPergunta, indice) {
+    const modal = Huddle.Utils.$("modal_pendencia");
+
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+
+    setTimeout(() => {
+      Huddle.Utils.$("pendencia_descricao")?.focus();
+    }, 60);
+  },
+
+  fecharModalPendencia() {
+    const modal = Huddle.Utils.$("modal_pendencia");
+
+    if (!modal) return;
+
+    modal.classList.add("hidden");
+  },
+
+  atualizarCamposPrazoPendencia() {
+    const tipo = Huddle.Utils.$("pendencia_prazo_tipo")?.value || "24H";
+    const campoDias = Huddle.Utils.$("campo_prazo_dias");
+    const campoData = Huddle.Utils.$("campo_prazo_data");
+
+    campoDias?.classList.toggle("hidden", tipo !== "DIAS");
+    campoData?.classList.toggle("hidden", tipo !== "DATA");
+  },
+
+  calcularPrazoPendencia() {
+    const tipo = Huddle.Utils.$("pendencia_prazo_tipo")?.value || "24H";
+    const agora = new Date();
+
+    if (tipo === "24H") {
+      const prazo = new Date(agora.getTime() + 24 * 60 * 60 * 1000);
+
+      return {
+        tipo,
+        valor: "24",
+        data: prazo.toISOString(),
+        texto: "24 horas"
+      };
+    }
+
+    if (tipo === "DIAS") {
+      const dias = Number(Huddle.Utils.$("pendencia_prazo_dias")?.value || 0);
+
+      if (!dias || dias < 1) {
+        Huddle.Utils.toast("Informe a quantidade de dias para resolução.");
+        return null;
+      }
+
+      const prazo = new Date(agora.getTime() + dias * 24 * 60 * 60 * 1000);
+
+      return {
+        tipo,
+        valor: String(dias),
+        data: prazo.toISOString(),
+        texto: `${dias} dia(s)`
+      };
+    }
+
+    if (tipo === "DATA") {
+      const dataInformada = Huddle.Utils.$("pendencia_prazo_data")?.value;
+
+      if (!dataInformada) {
+        Huddle.Utils.toast("Informe a data final da pendência.");
+        return null;
+      }
+
+      const prazo = new Date(`${dataInformada}T23:59:59`);
+
+      return {
+        tipo,
+        valor: dataInformada,
+        data: prazo.toISOString(),
+        texto: `até ${prazo.toLocaleDateString("pt-BR")}`
+      };
+    }
+
+    return {
+      tipo: "SEM_PRAZO",
+      valor: "",
+      data: "",
+      texto: "Sem prazo definido"
+    };
+  },
+
+  async salvarPendencia(event, idReuniao, idSetor, idPergunta, indice) {
+    event.preventDefault();
+
+    const descricao = Huddle.Utils.$("pendencia_descricao")?.value.trim() || "";
+    const observacaoPendencia = Huddle.Utils.$("pendencia_observacao")?.value.trim() || "";
+
+    if (!descricao) {
+      Huddle.Utils.toast("Descreva a pendência antes de salvar.");
+      return;
+    }
+
+    const prazo = this.calcularPrazoPendencia();
+
+    if (!prazo) return;
+
+    const perguntas = await this.obterPerguntasSetor(idSetor);
+    const pergunta = perguntas.find(item => item.id === idPergunta);
+    const respostaContexto = pergunta ? this.lerRespostaDoFormulario(pergunta) : "";
+    const observacaoResposta = Huddle.Utils.$("observacao_pergunta")?.value?.trim() || "";
+    const agora = Huddle.Utils.agoraISO();
+    const reuniao = await Huddle.DB.get("reunioes", idReuniao);
+    const setor = await Huddle.DB.get("setores", idSetor);
+
+    if (pergunta && (respostaContexto || observacaoResposta)) {
+      const respostaExistente = await this.obterResposta(idReuniao, idSetor, idPergunta);
+
+      await Huddle.DB.put("respostas", {
+        id: this.respostaId(idReuniao, idSetor, idPergunta),
+        id_reuniao: idReuniao,
+        id_setor: idSetor,
+        id_pergunta: idPergunta,
+        resposta: respostaContexto,
+        observacao: observacaoResposta,
+        gera_pendencia: Boolean(pergunta.gera_pendencia),
+        resposta_gera_pendencia: pergunta.resposta_gera_pendencia || "",
+        created_at: respostaExistente?.created_at || agora,
+        updated_at: agora
+      });
+    }
+
+    const pendencia = {
+      id: Huddle.Utils.id("PEN"),
+      id_reuniao_origem: idReuniao,
+      id_setor: idSetor,
+      id_pergunta: idPergunta,
+      id_resposta: this.respostaId(idReuniao, idSetor, idPergunta),
+      descricao,
+      observacao: observacaoPendencia,
+      pergunta_contexto: pergunta?.texto || "",
+      resposta_contexto: respostaContexto,
+      observacao_resposta_contexto: observacaoResposta,
+      prazo_tipo: prazo.tipo,
+      prazo_valor: prazo.valor,
+      prazo_data: prazo.data,
+      prazo_texto: prazo.texto,
+      status: "Aberta",
+      removida: false,
+      prorrogacoes: 0,
+      created_at: agora,
+      updated_at: agora,
+      resolved_at: "",
+      removed_at: ""
+    };
+
+    await Huddle.DB.add("pendencias", pendencia);
+
+    await Huddle.DB.add("pendencia_logs", {
+      id: Huddle.Utils.id("PLOG"),
+      id_pendencia: pendencia.id,
+      id_reuniao: idReuniao,
+      acao: "Criada",
+      descricao: `Pendência criada no setor ${setor ? setor.nome : idSetor}.`,
+      created_at: agora,
+      usuario: reuniao ? reuniao.responsavel_nome : ""
+    });
+
+    await Huddle.DB.addLog({
+      id_reuniao: idReuniao,
+      tipo: "pendencia",
+      acao: "Pendência criada",
+      detalhe: descricao,
+      usuario: reuniao ? reuniao.responsavel_nome : ""
+    });
+
+    Huddle.Utils.toast("Pendência adicionada.");
+
+    await this.renderPergunta(idReuniao, idSetor, indice);
   },
 
   async reabrirParaEdicao(idReuniao, idSetor) {
