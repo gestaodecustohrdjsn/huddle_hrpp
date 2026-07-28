@@ -327,6 +327,49 @@ Huddle.Reunioes = {
     await this.renderReuniao(reuniao.id);
   },
 
+  async obterSetoresDaReuniao(idReuniao) {
+    const todosSetores = await Huddle.DB.getAll("setores");
+    const relacoes = await Huddle.DB.getAll("reuniao_setores");
+
+    return relacoes
+      .filter(r => r.id_reuniao === idReuniao)
+      .map(relacao => {
+        const setor = todosSetores.find(s => s.id === relacao.id_setor);
+
+        return {
+          ...relacao,
+          tipo_presenca: relacao.tipo_presenca || "Coordenador",
+          setor_nome: setor ? setor.nome : "Setor não encontrado"
+        };
+      })
+      .sort((a, b) => Number(a.ordem) - Number(b.ordem));
+  },
+
+  ordenarSetoresParaLista(setores) {
+    return [...setores].sort((a, b) => {
+      if (a.respondido !== b.respondido) {
+        return a.respondido ? 1 : -1;
+      }
+
+      return Number(a.ordem) - Number(b.ordem);
+    });
+  },
+
+  obterProximoSetorPendente(setores, idSetorAtual) {
+    const atual = setores.find(s => s.id_setor === idSetorAtual);
+    const ordemAtual = atual ? Number(atual.ordem) : 0;
+
+    const pendentes = setores
+      .filter(s => !s.respondido && s.id_setor !== idSetorAtual)
+      .sort((a, b) => Number(a.ordem) - Number(b.ordem));
+
+    if (!pendentes.length) return null;
+
+    const proximoNaSequencia = pendentes.find(s => Number(s.ordem) > ordemAtual);
+
+    return proximoNaSequencia || pendentes[0];
+  },
+
   async renderReuniao(idReuniao) {
     const reuniao = await Huddle.DB.get("reunioes", idReuniao);
 
@@ -336,21 +379,12 @@ Huddle.Reunioes = {
       return;
     }
 
-    const todosSetores = await Huddle.DB.getAll("setores");
-    const relacoes = await Huddle.DB.getAll("reuniao_setores");
+    const setoresDaReuniao = await this.obterSetoresDaReuniao(idReuniao);
+    const setoresOrdenados = this.ordenarSetoresParaLista(setoresDaReuniao);
 
-    const setoresDaReuniao = relacoes
-      .filter(r => r.id_reuniao === idReuniao)
-      .sort((a, b) => Number(a.ordem) - Number(b.ordem))
-      .map(relacao => {
-        const setor = todosSetores.find(s => s.id === relacao.id_setor);
-
-        return {
-          ...relacao,
-          tipo_presenca: relacao.tipo_presenca || "Coordenador",
-          setor_nome: setor ? setor.nome : "Setor não encontrado"
-        };
-      });
+    const totalSetores = setoresDaReuniao.length;
+    const totalRespondidos = setoresDaReuniao.filter(s => s.respondido).length;
+    const totalPendentes = totalSetores - totalRespondidos;
 
     const todosRespondidos =
       setoresDaReuniao.length > 0 &&
@@ -363,7 +397,7 @@ Huddle.Reunioes = {
           <div>
             <h2>Setores presentes</h2>
             <p class="texto-apoio">
-              Clique em um setor para iniciar o fluxo daquele setor.
+              Os setores ainda pendentes ficam no topo. Conforme forem finalizados, descem automaticamente para o final da lista.
             </p>
           </div>
         </div>
@@ -372,11 +406,12 @@ Huddle.Reunioes = {
           <div><strong>Registro por:</strong> ${Huddle.Utils.escapeHtml(reuniao.responsavel_nome)}</div>
           <div><strong>Reunião:</strong> ${Huddle.Utils.escapeHtml(reuniao.data)} às ${Huddle.Utils.escapeHtml(reuniao.hora_inicio)}</div>
           <div><strong>Status:</strong> ${Huddle.Utils.escapeHtml(reuniao.status)}</div>
+          <div><strong>Andamento:</strong> ${totalRespondidos}/${totalSetores} setores respondidos · ${totalPendentes} pendente(s)</div>
         </div>
 
         <div class="lista-setores">
           ${
-            setoresDaReuniao.map(item => `
+            setoresOrdenados.map(item => `
               <button
                 class="item-setor ${item.respondido ? "respondido" : ""}"
                 onclick="Huddle.Reunioes.renderSetor('${item.id_reuniao}', '${item.id_setor}')"
@@ -428,14 +463,15 @@ Huddle.Reunioes = {
       return;
     }
 
-    const relacoes = await Huddle.DB.getAll("reuniao_setores");
+    const setoresDaReuniao = await this.obterSetoresDaReuniao(idReuniao);
 
-    const relacao = relacoes.find(r =>
+    const relacao = setoresDaReuniao.find(r =>
       r.id_reuniao === idReuniao &&
       r.id_setor === idSetor
     );
 
     const tipoPresenca = relacao?.tipo_presenca || "Coordenador";
+    const proximoSetor = this.obterProximoSetorPendente(setoresDaReuniao, idSetor);
 
     Huddle.Utils.$("app").innerHTML = `
       <div class="tela">
@@ -475,7 +511,7 @@ Huddle.Reunioes = {
 
         <div class="acoes">
           <button class="btn-secundario" onclick="Huddle.Reunioes.renderReuniao('${idReuniao}')">
-            Voltar para setores
+            Voltar para lista de setores
           </button>
 
           ${
@@ -486,9 +522,23 @@ Huddle.Reunioes = {
                 </button>
               `
               : `
-                <button class="btn-principal" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}')">
-                  Finalizar setor temporariamente
+                <button class="btn-secundario" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}', 'lista')">
+                  Finalizar e voltar para lista
                 </button>
+
+                ${
+                  proximoSetor
+                    ? `
+                      <button class="btn-principal" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}', 'proximo')">
+                        Finalizar e ir para: ${Huddle.Utils.escapeHtml(proximoSetor.setor_nome)}
+                      </button>
+                    `
+                    : `
+                      <button class="btn-principal" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}', 'lista')">
+                        Finalizar último setor
+                      </button>
+                    `
+                }
               `
           }
         </div>
@@ -497,7 +547,7 @@ Huddle.Reunioes = {
     `;
   },
 
-  async finalizarSetorTemporario(idReuniao, idSetor) {
+  async finalizarSetorTemporario(idReuniao, idSetor, acaoDepois = "lista") {
     const relacoes = await Huddle.DB.getAll("reuniao_setores");
 
     const relacao = relacoes.find(r =>
@@ -527,7 +577,20 @@ Huddle.Reunioes = {
       usuario: reuniao ? reuniao.responsavel_nome : ""
     });
 
-    Huddle.Utils.toast("Setor marcado como respondido.");
+    const setoresAtualizados = await this.obterSetoresDaReuniao(idReuniao);
+    const proximoSetor = this.obterProximoSetorPendente(setoresAtualizados, idSetor);
+
+    if (acaoDepois === "proximo" && proximoSetor) {
+      Huddle.Utils.toast(`Setor finalizado. Próximo: ${proximoSetor.setor_nome}.`);
+      await this.renderSetor(idReuniao, proximoSetor.id_setor);
+      return;
+    }
+
+    if (!proximoSetor) {
+      Huddle.Utils.toast("Setor finalizado. Todos os setores foram respondidos.");
+    } else {
+      Huddle.Utils.toast("Setor finalizado. Ele foi movido para o final da lista.");
+    }
 
     await this.renderReuniao(idReuniao);
   },
@@ -564,7 +627,7 @@ Huddle.Reunioes = {
       usuario: reuniao ? reuniao.responsavel_nome : ""
     });
 
-    Huddle.Utils.toast("Setor reaberto para edição.");
+    Huddle.Utils.toast("Setor reaberto para edição. Ele voltou para o topo da lista de pendentes.");
 
     await this.renderReuniao(idReuniao);
   },
@@ -577,11 +640,7 @@ Huddle.Reunioes = {
       return;
     }
 
-    const relacoes = await Huddle.DB.getAll("reuniao_setores");
-
-    const setoresDaReuniao = relacoes.filter(r =>
-      r.id_reuniao === idReuniao
-    );
+    const setoresDaReuniao = await this.obterSetoresDaReuniao(idReuniao);
 
     const todosRespondidos =
       setoresDaReuniao.length > 0 &&
