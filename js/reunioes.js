@@ -138,6 +138,7 @@ Huddle.Reunioes = {
 
                 return `
                   <div class="item-setor-presenca nao-selecionado" data-id-setor="${idSetor}">
+                    
                     <input
                       type="checkbox"
                       class="check-setor"
@@ -148,28 +149,15 @@ Huddle.Reunioes = {
 
                     <span class="nome-setor-presenca">${nomeSetor}</span>
 
-                    <div class="tipo-presenca">
-                      <label class="radio-chip">
-                        <input
-                          type="radio"
-                          name="tipo_presenca_${idSetor}"
-                          value="Coordenador"
-                          checked
-                          disabled
-                        >
-                        <span>Coordenador</span>
-                      </label>
+                    <select
+                      class="select-tipo-presenca"
+                      data-id-setor="${idSetor}"
+                      disabled
+                    >
+                      <option value="Coordenador" selected>Coordenador</option>
+                      <option value="Representante">Representante</option>
+                    </select>
 
-                      <label class="radio-chip">
-                        <input
-                          type="radio"
-                          name="tipo_presenca_${idSetor}"
-                          value="Representante"
-                          disabled
-                        >
-                        <span>Representante</span>
-                      </label>
-                    </div>
                   </div>
                 `;
               }).join("")
@@ -187,7 +175,7 @@ Huddle.Reunioes = {
         <div>
           <h2>Iniciar reunião</h2>
           <p class="texto-apoio">
-            Informe quem está conduzindo o registro da reunião e selecione os setores presentes.
+            Informe quem está registrando a reunião e selecione os setores presentes.
             Por padrão, todo setor presente entra como Coordenador. Altere para Representante quando necessário.
           </p>
         </div>
@@ -213,7 +201,8 @@ Huddle.Reunioes = {
         <div>
           <h3>Setores presentes</h3>
           <p class="texto-apoio">
-            Marque os setores presentes e indique se cada um está representado pelo Coordenador ou por Representante.
+            Marque os setores presentes. O tipo de presença fica como Coordenador por padrão,
+            podendo ser alterado para Representante.
           </p>
 
           ${htmlGrupos}
@@ -235,7 +224,7 @@ Huddle.Reunioes = {
   `;
 },
 
-  marcarGrupo(grupo, marcado) {
+ marcarGrupo(grupo, marcado) {
   document
     .querySelectorAll(`.check-setor[data-grupo="${grupo}"]`)
     .forEach(input => {
@@ -246,30 +235,28 @@ Huddle.Reunioes = {
 
 atualizarTipoPresenca(idSetor) {
   const check = document.querySelector(`.check-setor[value="${idSetor}"]`);
-
-  if (!check) return;
-
   const linha = document.querySelector(`.item-setor-presenca[data-id-setor="${idSetor}"]`);
-  const radios = document.querySelectorAll(`input[name="tipo_presenca_${idSetor}"]`);
+  const select = document.querySelector(`.select-tipo-presenca[data-id-setor="${idSetor}"]`);
 
-  radios.forEach(radio => {
-    radio.disabled = !check.checked;
-  });
+  if (!check || !linha || !select) return;
 
-  if (linha) {
-    linha.classList.toggle("selecionado", check.checked);
-    linha.classList.toggle("nao-selecionado", !check.checked);
-  }
+  select.disabled = !check.checked;
 
   if (check.checked) {
-    const algumMarcado = Array.from(radios).some(radio => radio.checked);
+    linha.classList.add("selecionado");
+    linha.classList.remove("nao-selecionado");
 
-    if (!algumMarcado && radios.length) {
-      radios[0].checked = true;
+    if (!select.value) {
+      select.value = "Coordenador";
     }
+  } else {
+    linha.classList.remove("selecionado");
+    linha.classList.add("nao-selecionado");
+
+    select.value = "Coordenador";
   }
 },
-
+  
   async criarReuniao(event) {
   event.preventDefault();
 
@@ -281,7 +268,7 @@ atualizarTipoPresenca(idSetor) {
       const idSetor = input.value;
 
       const tipoPresenca =
-        document.querySelector(`input[name="tipo_presenca_${idSetor}"]:checked`)?.value
+        document.querySelector(`.select-tipo-presenca[data-id-setor="${idSetor}"]`)?.value
         || "Coordenador";
 
       return {
@@ -340,97 +327,6 @@ atualizarTipoPresenca(idSetor) {
   Huddle.Utils.toast("Reunião criada com sucesso.");
 
   await this.renderReuniao(reuniao.id);
-},
-
-  async renderReuniao(idReuniao) {
-  const reuniao = await Huddle.DB.get("reunioes", idReuniao);
-
-  if (!reuniao) {
-    Huddle.Utils.toast("Reunião não encontrada.");
-    await this.renderHome();
-    return;
-  }
-
-  const todosSetores = await Huddle.DB.getAll("setores");
-  const relacoes = await Huddle.DB.getAll("reuniao_setores");
-
-  const setoresDaReuniao = relacoes
-    .filter(r => r.id_reuniao === idReuniao)
-    .sort((a, b) => Number(a.ordem) - Number(b.ordem))
-    .map(relacao => {
-      const setor = todosSetores.find(s => s.id === relacao.id_setor);
-
-      return {
-        ...relacao,
-        tipo_presenca: relacao.tipo_presenca || "Coordenador",
-        setor_nome: setor ? setor.nome : "Setor não encontrado"
-      };
-    });
-
-  const todosRespondidos =
-    setoresDaReuniao.length > 0 &&
-    setoresDaReuniao.every(s => s.respondido);
-
-  Huddle.Utils.$("app").innerHTML = `
-    <div class="tela">
-
-      <div class="tela-topo">
-        <div>
-          <h2>Setores presentes</h2>
-          <p class="texto-apoio">
-            Clique em um setor para iniciar o fluxo daquele setor.
-          </p>
-        </div>
-      </div>
-
-      <div class="info-reuniao">
-        <div><strong>Registro por:</strong> ${Huddle.Utils.escapeHtml(reuniao.responsavel_nome)}</div>
-        <div><strong>Reunião:</strong> ${Huddle.Utils.escapeHtml(reuniao.data)} às ${Huddle.Utils.escapeHtml(reuniao.hora_inicio)}</div>
-        <div><strong>Status:</strong> ${Huddle.Utils.escapeHtml(reuniao.status)}</div>
-      </div>
-
-      <div class="lista-setores">
-        ${
-          setoresDaReuniao.map(item => `
-            <button
-              class="item-setor ${item.respondido ? "respondido" : ""}"
-              onclick="Huddle.Reunioes.renderSetor('${item.id_reuniao}', '${item.id_setor}')"
-            >
-              <span>
-                <span class="nome-setor">${Huddle.Utils.escapeHtml(item.setor_nome)}</span><br>
-                <span class="tag tag-presenca">${Huddle.Utils.escapeHtml(item.tipo_presenca)}</span>
-              </span>
-
-              <span class="tag ${item.respondido ? "tag-respondido" : "tag-aguardando"}">
-                ${item.respondido ? "Respondido" : "Aguardando"}
-              </span>
-            </button>
-          `).join("")
-        }
-      </div>
-
-      <div class="acoes">
-        <button class="btn-secundario" onclick="Huddle.Reunioes.renderHome()">
-          Voltar ao início
-        </button>
-
-        <button
-          class="btn-principal"
-          ${todosRespondidos ? "" : "disabled"}
-          onclick="Huddle.Reunioes.concluirReuniao('${idReuniao}')"
-        >
-          Concluir reunião
-        </button>
-      </div>
-
-      ${
-        todosRespondidos
-          ? ""
-          : `<p class="texto-apoio">A reunião só poderá ser concluída depois que todos os setores presentes forem respondidos.</p>`
-      }
-
-    </div>
-  `;
 },
 
   async renderSetor(idReuniao, idSetor) {
