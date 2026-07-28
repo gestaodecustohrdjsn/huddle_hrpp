@@ -8,6 +8,12 @@ Huddle.Reunioes = {
       .filter(r => r.status === "Em andamento")
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+    const concluidas = reunioes
+      .filter(r => r.status === "Concluída")
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+
+    const ultimasConcluidas = concluidas.slice(0, 5);
+
     const app = Huddle.Utils.$("app");
 
     app.innerHTML = `
@@ -17,7 +23,7 @@ Huddle.Reunioes = {
           <div>
             <h2>Início</h2>
             <p class="texto-apoio">
-              Inicie uma nova reunião ou continue uma reunião em andamento neste dispositivo.
+              Inicie uma nova reunião, continue uma reunião em andamento ou consulte reuniões já concluídas neste dispositivo.
             </p>
           </div>
         </div>
@@ -42,9 +48,7 @@ Huddle.Reunioes = {
             ${
               emAndamento.length
                 ? `
-                  <p>
-                    Existe uma reunião aberta neste dispositivo.
-                  </p>
+                  <p>Existe uma reunião aberta neste dispositivo.</p>
 
                   <p>
                     <strong>${Huddle.Utils.escapeHtml(emAndamento[0].responsavel_nome)}</strong><br>
@@ -57,10 +61,21 @@ Huddle.Reunioes = {
                     </button>
                   </div>
                 `
-                : `
-                  <p>Nenhuma reunião em andamento neste navegador.</p>
-                `
+                : `<p>Nenhuma reunião em andamento neste navegador.</p>`
             }
+          </div>
+
+          <div class="card">
+            <h3>Reuniões realizadas</h3>
+            <p>
+              Consulte o histórico de reuniões já concluídas, setores participantes e respostas registradas.
+            </p>
+
+            <div class="acoes">
+              <button class="btn-principal" onclick="Huddle.Reunioes.renderHistoricoReunioes()" ${concluidas.length ? "" : "disabled"}>
+                Ver histórico
+              </button>
+            </div>
           </div>
 
           <div class="card">
@@ -89,6 +104,198 @@ Huddle.Reunioes = {
             </div>
           </div>
 
+        </div>
+
+        ${
+          ultimasConcluidas.length
+            ? `
+              <section class="secao-historico-home">
+                <div class="secao-cabecalho">
+                  <div>
+                    <h2>Últimas reuniões concluídas</h2>
+                    <p class="texto-apoio">Mostrando apenas as mais recentes para manter a tela inicial leve.</p>
+                  </div>
+
+                  <button class="btn-claro" onclick="Huddle.Reunioes.renderHistoricoReunioes()">
+                    Ver todas
+                  </button>
+                </div>
+
+                <div class="lista-reunioes-resumo">
+                  ${ultimasConcluidas.map(reuniao => this.htmlItemReuniaoResumo(reuniao)).join("")}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+      </div>
+    `;
+  },
+
+  htmlItemReuniaoResumo(reuniao) {
+    return `
+      <button class="item-reuniao-resumo" onclick="Huddle.Reunioes.renderDetalheReuniao('${reuniao.id}')">
+        <span>
+          <strong>Reunião do dia ${Huddle.Utils.escapeHtml(reuniao.data)} às ${Huddle.Utils.escapeHtml(reuniao.hora_inicio)}</strong><br>
+          <small>Registro por ${Huddle.Utils.escapeHtml(reuniao.responsavel_nome || "Não informado")}</small>
+        </span>
+
+        <span class="tag tag-respondido">Concluída</span>
+      </button>
+    `;
+  },
+
+  async renderHistoricoReunioes() {
+    const reunioes = await Huddle.DB.getAll("reunioes");
+    const relacoes = await Huddle.DB.getAll("reuniao_setores");
+
+    const concluidas = reunioes
+      .filter(r => r.status === "Concluída")
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+
+    const htmlLista = concluidas.length
+      ? concluidas.map(reuniao => {
+        const setores = relacoes.filter(r => r.id_reuniao === reuniao.id);
+        const coordenadores = setores.filter(s => (s.tipo_presenca || "Coordenador") === "Coordenador").length;
+        const representantes = setores.filter(s => (s.tipo_presenca || "Coordenador") === "Representante").length;
+
+        return `
+          <button class="item-reuniao-historico" onclick="Huddle.Reunioes.renderDetalheReuniao('${reuniao.id}')">
+            <span>
+              <strong>Reunião do dia ${Huddle.Utils.escapeHtml(reuniao.data)} às ${Huddle.Utils.escapeHtml(reuniao.hora_inicio)}</strong><br>
+              <small>
+                Registro por ${Huddle.Utils.escapeHtml(reuniao.responsavel_nome || "Não informado")} ·
+                ${setores.length} setor(es) ·
+                ${coordenadores} coord. ·
+                ${representantes} repres.
+              </small>
+            </span>
+
+            <span class="tag tag-respondido">Concluída</span>
+          </button>
+        `;
+      }).join("")
+      : `
+        <div class="card">
+          <p class="texto-apoio">Ainda não há reuniões concluídas neste dispositivo.</p>
+        </div>
+      `;
+
+    Huddle.Utils.$("app").innerHTML = `
+      <div class="tela">
+
+        <div class="tela-topo">
+          <div>
+            <h2>Reuniões realizadas</h2>
+            <p class="texto-apoio">
+              Histórico das reuniões concluídas neste navegador. Depois, essa área vira base dos relatórios de participação e engajamento dos setores.
+            </p>
+          </div>
+        </div>
+
+        <div class="lista-reunioes-historico">
+          ${htmlLista}
+        </div>
+
+        <div class="acoes">
+          <button class="btn-secundario" onclick="Huddle.Reunioes.renderHome()">
+            Voltar ao início
+          </button>
+        </div>
+
+      </div>
+    `;
+  },
+
+  async renderDetalheReuniao(idReuniao) {
+    const reuniao = await Huddle.DB.get("reunioes", idReuniao);
+
+    if (!reuniao) {
+      Huddle.Utils.toast("Reunião não encontrada.");
+      await this.renderHistoricoReunioes();
+      return;
+    }
+
+    const setoresDaReuniao = await this.obterSetoresDaReuniao(idReuniao);
+    const respostas = await Huddle.DB.getAll("respostas");
+    const perguntas = await Huddle.DB.getAll("perguntas");
+
+    const respostasDaReuniao = respostas.filter(r => r.id_reuniao === idReuniao);
+    const totalCoordenador = setoresDaReuniao.filter(s => s.tipo_presenca === "Coordenador").length;
+    const totalRepresentante = setoresDaReuniao.filter(s => s.tipo_presenca === "Representante").length;
+
+    const htmlSetores = setoresDaReuniao
+      .sort((a, b) => Number(a.ordem) - Number(b.ordem))
+      .map(item => {
+        const respostasSetor = respostasDaReuniao.filter(r => r.id_setor === item.id_setor);
+
+        const htmlRespostas = respostasSetor.length
+          ? respostasSetor.map(resposta => {
+            const pergunta = perguntas.find(p => p.id === resposta.id_pergunta);
+
+            return `
+              <div class="resposta-detalhe">
+                <strong>${Huddle.Utils.escapeHtml(pergunta?.texto || resposta.id_pergunta)}</strong>
+                <div>Resposta: <strong>${Huddle.Utils.escapeHtml(resposta.resposta || "-")}</strong></div>
+                ${resposta.observacao ? `<div>Observação: ${Huddle.Utils.escapeHtml(resposta.observacao)}</div>` : ""}
+              </div>
+            `;
+          }).join("")
+          : `<p class="texto-apoio">Nenhuma resposta registrada para este setor.</p>`;
+
+        return `
+          <details class="detalhe-setor-reuniao">
+            <summary>
+              <span>
+                <strong>${Huddle.Utils.escapeHtml(item.setor_nome)}</strong><br>
+                <small>${Huddle.Utils.escapeHtml(item.tipo_presenca)} · ${respostasSetor.length} resposta(s)</small>
+              </span>
+
+              <span class="tag ${item.respondido ? "tag-respondido" : "tag-aguardando"}">
+                ${item.respondido ? "Respondido" : "Aguardando"}
+              </span>
+            </summary>
+
+            <div class="detalhe-setor-conteudo">
+              ${htmlRespostas}
+            </div>
+          </details>
+        `;
+      }).join("");
+
+    Huddle.Utils.$("app").innerHTML = `
+      <div class="tela">
+
+        <div class="tela-topo">
+          <div>
+            <h2>Detalhe da reunião</h2>
+            <p class="texto-apoio">
+              Reunião do dia ${Huddle.Utils.escapeHtml(reuniao.data)} às ${Huddle.Utils.escapeHtml(reuniao.hora_inicio)}.
+            </p>
+          </div>
+        </div>
+
+        <div class="info-reuniao">
+          <div><strong>Registro por:</strong> ${Huddle.Utils.escapeHtml(reuniao.responsavel_nome || "Não informado")}</div>
+          <div><strong>Início:</strong> ${Huddle.Utils.escapeHtml(reuniao.hora_inicio || "-")}</div>
+          <div><strong>Término:</strong> ${Huddle.Utils.escapeHtml(reuniao.hora_fim || "-")}</div>
+          <div><strong>Status:</strong> ${Huddle.Utils.escapeHtml(reuniao.status || "-")}</div>
+          <div><strong>Participação:</strong> ${setoresDaReuniao.length} setor(es), ${totalCoordenador} Coordenador(es), ${totalRepresentante} Representante(s)</div>
+        </div>
+
+        <div class="lista-detalhe-reuniao">
+          ${htmlSetores || `<p class="texto-apoio">Nenhum setor registrado para esta reunião.</p>`}
+        </div>
+
+        <div class="acoes">
+          <button class="btn-secundario" onclick="Huddle.Reunioes.renderHistoricoReunioes()">
+            Voltar ao histórico
+          </button>
+
+          <button class="btn-claro" onclick="Huddle.Reunioes.renderHome()">
+            Ir ao início
+          </button>
         </div>
 
       </div>
@@ -464,6 +671,8 @@ Huddle.Reunioes = {
     }
 
     const setoresDaReuniao = await this.obterSetoresDaReuniao(idReuniao);
+    const perguntas = await Huddle.Perguntas.obterPerguntasSetor(idSetor);
+    const respostas = await Huddle.Perguntas.obterRespostasSetor(idReuniao, idSetor);
 
     const relacao = setoresDaReuniao.find(r =>
       r.id_reuniao === idReuniao &&
@@ -471,7 +680,9 @@ Huddle.Reunioes = {
     );
 
     const tipoPresenca = relacao?.tipo_presenca || "Coordenador";
-    const proximoSetor = this.obterProximoSetorPendente(setoresDaReuniao, idSetor);
+    const totalRespondidas = perguntas.filter(pergunta =>
+      respostas.some(resposta => resposta.id_pergunta === pergunta.id && String(resposta.resposta || "").trim() !== "")
+    ).length;
 
     Huddle.Utils.$("app").innerHTML = `
       <div class="tela">
@@ -480,8 +691,7 @@ Huddle.Reunioes = {
           <div>
             <h2>${Huddle.Utils.escapeHtml(setor.nome)}</h2>
             <p class="texto-apoio">
-              Esta é a tela inicial do setor. Na próxima etapa entram as pendências abertas
-              e o carrossel de perguntas.
+              Revise o setor, responda as perguntas e registre observações quando necessário.
             </p>
           </div>
         </div>
@@ -491,22 +701,44 @@ Huddle.Reunioes = {
           <div><strong>Registro por:</strong> ${Huddle.Utils.escapeHtml(reuniao.responsavel_nome)}</div>
           <div><strong>Presença do setor:</strong> ${Huddle.Utils.escapeHtml(tipoPresenca)}</div>
           <div><strong>Status do setor:</strong> ${relacao?.respondido ? "Respondido" : "Aguardando"}</div>
+          <div><strong>Perguntas:</strong> ${totalRespondidas}/${perguntas.length} respondida(s)</div>
         </div>
 
         <div class="card card-destaque">
-          <h3>Fluxo do setor</h3>
+          <h3>Perguntas do setor</h3>
 
           <p>
-            Depois, esta tela terá:
+            As perguntas aparecem em modo carrossel, com barra de progresso. Toda resposta possui campo de observação.
           </p>
 
+          ${perguntas.length ? `
+            <div class="acoes">
+              <button class="btn-principal" onclick="Huddle.Perguntas.iniciar('${idReuniao}', '${idSetor}', 0)">
+                ${respostas.length ? "Continuar / editar perguntas" : "Iniciar perguntas"}
+              </button>
+
+              ${respostas.length ? `
+                <button class="btn-claro" onclick="Huddle.Perguntas.renderRevisaoSetor('${idReuniao}', '${idSetor}')">
+                  Revisar respostas
+                </button>
+              ` : ""}
+            </div>
+          ` : `
+            <p class="texto-apoio">Este setor ainda não possui perguntas cadastradas.</p>
+          `}
+        </div>
+
+        <div class="card">
+          <h3>Pendências do setor</h3>
           <p>
-            1. Pendências abertas acumuladas deste setor<br>
-            2. Opções de resolver, prorrogar ou remover pendência<br>
-            3. Botão para iniciar perguntas<br>
-            4. Carrossel de perguntas com observação em qualquer resposta<br>
-            5. Botão para adicionar quantas pendências forem necessárias
+            Na próxima etapa, esta área vai exibir as pendências abertas acumuladas do setor antes das perguntas.
           </p>
+
+          <div class="acoes">
+            <button class="btn-secundario" disabled>
+              Em breve
+            </button>
+          </div>
         </div>
 
         <div class="acoes">
@@ -514,122 +746,15 @@ Huddle.Reunioes = {
             Voltar para lista de setores
           </button>
 
-          ${
-            relacao?.respondido
-              ? `
-                <button class="btn-principal" onclick="Huddle.Reunioes.marcarSetorComoAguardando('${idReuniao}', '${idSetor}')">
-                  Editar setor
-                </button>
-              `
-              : `
-                <button class="btn-secundario" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}', 'lista')">
-                  Finalizar e voltar para lista
-                </button>
-
-                ${
-                  proximoSetor
-                    ? `
-                      <button class="btn-principal" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}', 'proximo')">
-                        Finalizar e ir para: ${Huddle.Utils.escapeHtml(proximoSetor.setor_nome)}
-                      </button>
-                    `
-                    : `
-                      <button class="btn-principal" onclick="Huddle.Reunioes.finalizarSetorTemporario('${idReuniao}', '${idSetor}', 'lista')">
-                        Finalizar último setor
-                      </button>
-                    `
-                }
-              `
-          }
+          ${relacao?.respondido ? `
+            <button class="btn-principal" onclick="Huddle.Perguntas.reabrirParaEdicao('${idReuniao}', '${idSetor}')">
+              Editar setor
+            </button>
+          ` : ""}
         </div>
 
       </div>
     `;
-  },
-
-  async finalizarSetorTemporario(idReuniao, idSetor, acaoDepois = "lista") {
-    const relacoes = await Huddle.DB.getAll("reuniao_setores");
-
-    const relacao = relacoes.find(r =>
-      r.id_reuniao === idReuniao &&
-      r.id_setor === idSetor
-    );
-
-    if (!relacao) {
-      Huddle.Utils.toast("Vínculo do setor não encontrado.");
-      return;
-    }
-
-    relacao.respondido = true;
-    relacao.respondido_em = Huddle.Utils.agoraISO();
-    relacao.updated_at = Huddle.Utils.agoraISO();
-
-    await Huddle.DB.put("reuniao_setores", relacao);
-
-    const setor = await Huddle.DB.get("setores", idSetor);
-    const reuniao = await Huddle.DB.get("reunioes", idReuniao);
-
-    await Huddle.DB.addLog({
-      id_reuniao: idReuniao,
-      tipo: "setor",
-      acao: "Setor finalizado temporariamente",
-      detalhe: setor ? setor.nome : idSetor,
-      usuario: reuniao ? reuniao.responsavel_nome : ""
-    });
-
-    const setoresAtualizados = await this.obterSetoresDaReuniao(idReuniao);
-    const proximoSetor = this.obterProximoSetorPendente(setoresAtualizados, idSetor);
-
-    if (acaoDepois === "proximo" && proximoSetor) {
-      Huddle.Utils.toast(`Setor finalizado. Próximo: ${proximoSetor.setor_nome}.`);
-      await this.renderSetor(idReuniao, proximoSetor.id_setor);
-      return;
-    }
-
-    if (!proximoSetor) {
-      Huddle.Utils.toast("Setor finalizado. Todos os setores foram respondidos.");
-    } else {
-      Huddle.Utils.toast("Setor finalizado. Ele foi movido para o final da lista.");
-    }
-
-    await this.renderReuniao(idReuniao);
-  },
-
-  async marcarSetorComoAguardando(idReuniao, idSetor) {
-    const confirmar = confirm(
-      "Deseja editar este setor? Ele voltará para o status Aguardando."
-    );
-
-    if (!confirmar) return;
-
-    const relacoes = await Huddle.DB.getAll("reuniao_setores");
-
-    const relacao = relacoes.find(r =>
-      r.id_reuniao === idReuniao &&
-      r.id_setor === idSetor
-    );
-
-    if (!relacao) return;
-
-    relacao.respondido = false;
-    relacao.updated_at = Huddle.Utils.agoraISO();
-
-    await Huddle.DB.put("reuniao_setores", relacao);
-
-    const setor = await Huddle.DB.get("setores", idSetor);
-    const reuniao = await Huddle.DB.get("reunioes", idReuniao);
-
-    await Huddle.DB.addLog({
-      id_reuniao: idReuniao,
-      tipo: "setor",
-      acao: "Setor reaberto para edição",
-      detalhe: setor ? setor.nome : idSetor,
-      usuario: reuniao ? reuniao.responsavel_nome : ""
-    });
-
-    Huddle.Utils.toast("Setor reaberto para edição. Ele voltou para o topo da lista de pendentes.");
-
-    await this.renderReuniao(idReuniao);
   },
 
   async concluirReuniao(idReuniao) {
