@@ -464,4 +464,107 @@ button:disabled {
   .acoes button {
     width: 100%;
   }
+
+
+
+  /* =========================
+   SELEÇÃO DE PRESENÇA POR SETOR
+========================= */
+
+.item-setor-presenca {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cinza-borda);
+  transition: 0.18s ease;
+}
+
+.item-setor-presenca:last-child {
+  border-bottom: none;
+}
+
+.item-setor-presenca:hover {
+  background: var(--cinza-2);
+}
+
+.item-setor-presenca.nao-selecionado {
+  opacity: 0.75;
+}
+
+.item-setor-presenca.selecionado {
+  background: #ffffff;
+}
+
+.item-setor-presenca .check-setor {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.nome-setor-presenca {
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.tipo-presenca {
+  display: flex;
+  gap: 6px;
+  background: var(--cinza);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--cinza-borda);
+}
+
+.radio-chip {
+  position: relative;
+  cursor: pointer;
+}
+
+.radio-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radio-chip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 11px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #555;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.radio-chip input:checked + span {
+  background: var(--turquesa);
+  color: white;
+}
+
+.radio-chip input:disabled + span {
+  opacity: 0.45;
+}
+
+.tag-presenca {
+  border-color: var(--turquesa);
+  color: var(--turquesa);
+}
+
+@media (max-width: 700px) {
+  .item-setor-presenca {
+    grid-template-columns: 32px 1fr;
+    align-items: flex-start;
+  }
+
+  .tipo-presenca {
+    grid-column: 2 / 3;
+    width: fit-content;
+    margin-top: 4px;
+  }
+}
 }
