@@ -18,12 +18,6 @@ Huddle.Reunioes = {
 
     app.innerHTML = `
       <div class="tela tela-home">
-        <div class="home-topo-acoes">
-          <button class="btn-icone-config" title="Configurações" onclick="Huddle.Reunioes.renderConfiguracoesEmBreve()">
-            ⚙
-          </button>
-        </div>
-
         ${await Huddle.Pendencias.htmlPendenciasHome(pendenciasAbertas)}
 
         ${

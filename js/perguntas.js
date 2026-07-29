@@ -163,10 +163,9 @@ Huddle.Perguntas = {
 
     const respostaAtual = await this.obterResposta(idReuniao, idSetor, pergunta.id);
     const opcoes = await this.obterOpcoesPergunta(pergunta.id);
-    const pendenciasPergunta = await this.obterPendenciasPergunta(idReuniao, idSetor, pergunta.id);
     const pendenciasAbertasSetor = await Huddle.Pendencias.obterAbertasDoSetor(idSetor);
-    const pendenciasAntigasSetor = pendenciasAbertasSetor.filter(pendencia =>
-      pendencia.id_reuniao_origem !== idReuniao
+    const pendenciasPergunta = pendenciasAbertasSetor.filter(pendencia =>
+      pendencia.id_pergunta === pergunta.id
     );
     const total = perguntas.length;
     const numero = indice + 1;
@@ -187,8 +186,6 @@ Huddle.Perguntas = {
         <div class="barra-progresso" aria-label="Progresso das perguntas">
           <div class="barra-progresso-preenchida" style="width: ${percentual}%"></div>
         </div>
-
-        ${await Huddle.Pendencias.htmlPendenciasDurantePerguntas(pendenciasAntigasSetor, idReuniao, idSetor, indice)}
 
         <form class="card card-pergunta" onsubmit="Huddle.Perguntas.avancar(event, '${idReuniao}', '${idSetor}', ${indice})">
           <div class="pergunta-meta pergunta-meta-acoes">
@@ -215,7 +212,7 @@ Huddle.Perguntas = {
             >${Huddle.Utils.escapeHtml(respostaAtual?.observacao || "")}</textarea>
           </div>
 
-          ${this.renderCardsPendenciasPergunta(pendenciasPergunta)}
+          ${await Huddle.Pendencias.htmlPendenciasPerguntaCarrossel(pendenciasPergunta, idReuniao, idSetor, indice)}
 
           <div class="acoes acoes-pergunta">
             <button type="button" class="btn-secundario" onclick="Huddle.Perguntas.voltar('${idReuniao}', '${idSetor}', ${indice})">

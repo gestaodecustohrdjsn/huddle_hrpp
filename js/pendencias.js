@@ -75,6 +75,95 @@ Huddle.Pendencias = {
     });
   },
 
+  formatarTextoReuniao(pendencia) {
+    if (!pendencia.reuniao_origem) return "Reunião não localizada";
+    return `Reunião do dia ${pendencia.reuniao_data} às ${pendencia.reuniao_hora}`;
+  },
+
+  formatarSituacaoPrazo(pendencia) {
+    if (!pendencia.prazo_data) {
+      return {
+        situacao: "Sem prazo definido",
+        detalhe: "Sem vencimento informado",
+        classe: "neutro"
+      };
+    }
+
+    const agora = new Date();
+    const prazo = new Date(pendencia.prazo_data);
+    const diff = prazo.getTime() - agora.getTime();
+    const umDia = 24 * 60 * 60 * 1000;
+    const umaHora = 60 * 60 * 1000;
+
+    if (diff < 0) {
+      const atraso = Math.abs(diff);
+      const dias = Math.floor(atraso / umDia);
+      const horas = Math.floor((atraso % umDia) / umaHora);
+
+      if (dias > 0) {
+        return {
+          situacao: "Prazo vencido",
+          detalhe: `${dias} dia(s) em atraso`,
+          classe: "vencido"
+        };
+      }
+
+      return {
+        situacao: "Prazo vencido",
+        detalhe: `${Math.max(horas, 1)} hora(s) em atraso`,
+        classe: "vencido"
+      };
+    }
+
+    if (diff <= umDia) {
+      const horas = Math.ceil(diff / umaHora);
+      return {
+        situacao: "Dentro do prazo",
+        detalhe: horas <= 1 ? "menos de 1 hora restante" : `${horas} hora(s) restantes`,
+        classe: "atencao"
+      };
+    }
+
+    const dias = Math.ceil(diff / umDia);
+
+    return {
+      situacao: "Dentro do prazo",
+      detalhe: `${dias} dia(s) restantes`,
+      classe: "ok"
+    };
+  },
+
+  htmlResumoPendencia(pendencia, opcoes = {}) {
+    const textoReuniao = this.formatarTextoReuniao(pendencia);
+    const prazo = this.formatarSituacaoPrazo(pendencia);
+    const prorrogacoes = Number(pendencia.prorrogacoes || 0);
+    const tagExtra = opcoes.tagExtra || "";
+
+    return `
+      <div class="resumo-pendencia ${opcoes.classeExtra || ""}">
+        <div class="resumo-pendencia-pergunta">
+          ${Huddle.Utils.escapeHtml(pendencia.pergunta_texto || "Pergunta não informada")}
+        </div>
+
+        <strong class="resumo-pendencia-descricao">
+          ${Huddle.Utils.escapeHtml(pendencia.descricao || "Sem descrição")}
+        </strong>
+
+        <div class="resumo-pendencia-info">
+          <span><strong>Setor:</strong> ${Huddle.Utils.escapeHtml(pendencia.setor_nome || "Setor não informado")}</span>
+          <span><strong>Reunião:</strong> ${Huddle.Utils.escapeHtml(textoReuniao)}</span>
+        </div>
+
+        <div class="resumo-pendencia-rodape">
+          <span class="status-prazo status-prazo-${prazo.classe}">${Huddle.Utils.escapeHtml(prazo.situacao)}</span>
+          <span>${Huddle.Utils.escapeHtml(prazo.detalhe)}</span>
+          ${prorrogacoes > 0 ? `<span>${prorrogacoes} prorrogação(ões)</span>` : ""}
+          ${tagExtra}
+        </div>
+      </div>
+    `;
+  },
+
   async htmlPendenciasHome(pendencias) {
     if (!pendencias.length) return "";
 
@@ -90,11 +179,15 @@ Huddle.Pendencias = {
         <div class="lista-home-pendencias">
           ${enriquecidas.map(pendencia => `
             <div class="item-home-pendencia">
-              <strong>${Huddle.Utils.escapeHtml(pendencia.descricao || "Sem descrição")}</strong>
-              <span>${Huddle.Utils.escapeHtml(pendencia.setor_nome)}</span>
-              <small>${Huddle.Utils.escapeHtml(pendencia.pergunta_texto)}</small>
+              ${this.htmlResumoPendencia(pendencia)}
             </div>
           `).join("")}
+        </div>
+
+        <div class="rodape-pendencias-home">
+          <button class="btn-claro" onclick="Huddle.Pendencias.renderPainelGeral()">
+            Abrir painel de pendências
+          </button>
         </div>
       </details>
     `;
@@ -127,9 +220,7 @@ Huddle.Pendencias = {
         <div class="lista-pendencias-geradas">
           ${enriquecidas.map(pendencia => `
             <div class="item-pendencia-gerada">
-              <strong>${Huddle.Utils.escapeHtml(pendencia.descricao || "Sem descrição")}</strong>
-              <span>${Huddle.Utils.escapeHtml(pendencia.setor_nome)}</span>
-              <small>${Huddle.Utils.escapeHtml(pendencia.pergunta_texto)}</small>
+              ${this.htmlResumoPendencia(pendencia)}
             </div>
           `).join("")}
         </div>
@@ -151,19 +242,12 @@ Huddle.Pendencias = {
     return `
       <div class="lista-pendencias-setor">
         ${enriquecidas.map(pendencia => {
-          const textoReuniao = pendencia.reuniao_origem
-            ? `Reunião do dia ${pendencia.reuniao_data} às ${pendencia.reuniao_hora}`
-            : "Reunião não localizada";
-
           if (pendencia.id_reuniao_origem === idReuniaoAtual) {
             return `
               <div class="pendencia-setor-item pendencia-sem-acao">
-                <div class="pendencia-setor-topo">
-                  <strong>${Huddle.Utils.escapeHtml(pendencia.descricao || "Sem descrição")}</strong>
-                  <span class="tag tag-gerada-agora">Gerada nesta reunião</span>
-                </div>
-                <span>${Huddle.Utils.escapeHtml(textoReuniao)}</span>
-                <small>${Huddle.Utils.escapeHtml(pendencia.pergunta_texto)}</small>
+                ${this.htmlResumoPendencia(pendencia, {
+                  tagExtra: `<span class="tag tag-gerada-agora">Gerada nesta reunião</span>`
+                })}
               </div>
             `;
           }
@@ -173,9 +257,7 @@ Huddle.Pendencias = {
               class="pendencia-setor-item pendencia-clicavel"
               onclick="Huddle.Pendencias.abrirDetalhe('${pendencia.id}', '${idReuniaoAtual}', '${idSetor}', ${indicePergunta === null ? "null" : indicePergunta})"
             >
-              <strong>${Huddle.Utils.escapeHtml(pendencia.descricao || "Sem descrição")}</strong>
-              <span>${Huddle.Utils.escapeHtml(textoReuniao)}</span>
-              <small>${Huddle.Utils.escapeHtml(pendencia.pergunta_texto)}</small>
+              ${this.htmlResumoPendencia(pendencia)}
             </button>
           `;
         }).join("")}
@@ -183,22 +265,67 @@ Huddle.Pendencias = {
     `;
   },
 
-  async htmlPendenciasDurantePerguntas(pendencias, idReuniaoAtual, idSetor, indicePergunta) {
+  async htmlPendenciasPerguntaCarrossel(pendencias, idReuniaoAtual, idSetor, indicePergunta) {
     if (!pendencias.length) return "";
 
     const lista = await this.htmlPendenciasSetorComAcoes(pendencias, idReuniaoAtual, idSetor, indicePergunta);
 
     return `
-      <details class="card card-pendencias-durante-perguntas" open>
-        <summary>
-          <span>Pendências abertas do setor</span>
+      <div class="pendencias-pergunta-vinculadas">
+        <div class="pendencias-pergunta-titulo">
+          <strong>Pendências vinculadas a esta pergunta</strong>
           <span class="tag tag-pendencias">${pendencias.length}</span>
-        </summary>
-
-        <div class="conteudo-pendencias-durante-perguntas">
-          ${lista}
         </div>
-      </details>
+
+        ${lista}
+      </div>
+    `;
+  },
+
+  async htmlPendenciasDurantePerguntas(pendencias, idReuniaoAtual, idSetor, indicePergunta) {
+    return await this.htmlPendenciasPerguntaCarrossel(pendencias, idReuniaoAtual, idSetor, indicePergunta);
+  },
+
+  async renderPainelGeral() {
+    const abertas = await this.obterTodasAbertas();
+    const enriquecidas = await this.enriquecer(abertas);
+
+    const htmlLista = enriquecidas.length
+      ? enriquecidas.map(pendencia => `
+        <button
+          class="pendencia-painel-item pendencia-clicavel"
+          onclick="Huddle.Pendencias.abrirDetalhe('${pendencia.id}', '', '__PAINEL__', null)"
+        >
+          ${this.htmlResumoPendencia(pendencia)}
+        </button>
+      `).join("")
+      : `
+        <div class="card">
+          <p class="texto-apoio sem-margem">Não há pendências abertas neste dispositivo.</p>
+        </div>
+      `;
+
+    Huddle.Utils.$("app").innerHTML = `
+      <div class="tela">
+        <div class="tela-topo">
+          <div>
+            <h2>Painel de pendências</h2>
+            <p class="texto-apoio">
+              Pendências abertas em todos os setores, ordenadas automaticamente por prazo.
+            </p>
+          </div>
+        </div>
+
+        <div class="lista-painel-pendencias">
+          ${htmlLista}
+        </div>
+
+        <div class="acoes">
+          <button class="btn-secundario" onclick="Huddle.Reunioes.renderHome()">
+            Voltar ao início
+          </button>
+        </div>
+      </div>
     `;
   },
 
@@ -221,10 +348,8 @@ Huddle.Pendencias = {
     const [enriquecida] = await this.enriquecer([pendencia]);
     const reunioesSemResolver = await this.calcularReunioesSemResolver(pendencia);
     const tempoAberta = this.tempoDesde(pendencia.created_at);
-    const textoReuniao = enriquecida.reuniao_origem
-      ? `Reunião do dia ${enriquecida.reuniao_data} às ${enriquecida.reuniao_hora}`
-      : "Reunião não localizada";
-
+    const textoReuniao = this.formatarTextoReuniao(enriquecida);
+    const prazo = this.formatarSituacaoPrazo(enriquecida);
     const indiceSeguro = indicePergunta === null || indicePergunta === undefined ? "null" : Number(indicePergunta);
 
     document.body.insertAdjacentHTML("beforeend", `
@@ -269,6 +394,11 @@ Huddle.Pendencias = {
             <div class="detalhe-pendencia-bloco">
               <span>Data e hora da reunião</span>
               <strong>${Huddle.Utils.escapeHtml(textoReuniao)}</strong>
+            </div>
+
+            <div class="detalhe-pendencia-bloco">
+              <span>Situação do prazo</span>
+              <strong>${Huddle.Utils.escapeHtml(prazo.situacao)} | ${Huddle.Utils.escapeHtml(prazo.detalhe)}</strong>
             </div>
 
             <div class="detalhe-pendencia-bloco">
@@ -413,7 +543,7 @@ Huddle.Pendencias = {
     if (!pendencia) return;
 
     const agora = Huddle.Utils.agoraISO();
-    const reuniao = await Huddle.DB.get("reunioes", idReuniaoAtual);
+    const reuniao = idReuniaoAtual ? await Huddle.DB.get("reunioes", idReuniaoAtual) : null;
 
     pendencia.status = "Resolvida";
     pendencia.resolved_at = agora;
@@ -423,7 +553,7 @@ Huddle.Pendencias = {
 
     await this.registrarLogPendencia({
       idPendencia,
-      idReuniao: idReuniaoAtual,
+      idReuniao: idReuniaoAtual || "",
       acao: "Resolvida",
       descricao: "Pendência marcada como resolvida.",
       usuario: reuniao?.responsavel_nome || ""
@@ -444,7 +574,7 @@ Huddle.Pendencias = {
 
     const observacao = Huddle.Utils.$("acao_observacao_prorrogacao")?.value.trim() || "";
     const agora = Huddle.Utils.agoraISO();
-    const reuniao = await Huddle.DB.get("reunioes", idReuniaoAtual);
+    const reuniao = idReuniaoAtual ? await Huddle.DB.get("reunioes", idReuniaoAtual) : null;
 
     pendencia.prazo_tipo = prazo.tipo;
     pendencia.prazo_valor = prazo.valor;
@@ -457,7 +587,7 @@ Huddle.Pendencias = {
 
     await this.registrarLogPendencia({
       idPendencia,
-      idReuniao: idReuniaoAtual,
+      idReuniao: idReuniaoAtual || "",
       acao: "Prorrogada",
       descricao: `Novo prazo: ${prazo.texto}.${observacao ? " " + observacao : ""}`,
       usuario: reuniao?.responsavel_nome || ""
@@ -475,7 +605,7 @@ Huddle.Pendencias = {
     if (!pendencia) return;
 
     const agora = Huddle.Utils.agoraISO();
-    const reuniao = await Huddle.DB.get("reunioes", idReuniaoAtual);
+    const reuniao = idReuniaoAtual ? await Huddle.DB.get("reunioes", idReuniaoAtual) : null;
 
     pendencia.status = "Removida";
     pendencia.removida = true;
@@ -486,7 +616,7 @@ Huddle.Pendencias = {
 
     await this.registrarLogPendencia({
       idPendencia,
-      idReuniao: idReuniaoAtual,
+      idReuniao: idReuniaoAtual || "",
       acao: "Removida sem resolver",
       descricao: "Pendência removida sem ser marcada como resolvida.",
       usuario: reuniao?.responsavel_nome || ""
@@ -518,6 +648,11 @@ Huddle.Pendencias = {
 
   async atualizarTelaAposAcao(idReuniaoAtual, idSetorAtual, indicePergunta = null) {
     this.fecharDetalhe();
+
+    if (!idReuniaoAtual || idSetorAtual === "__PAINEL__") {
+      await this.renderPainelGeral();
+      return;
+    }
 
     if (indicePergunta === null || indicePergunta === undefined || Number.isNaN(Number(indicePergunta))) {
       await Huddle.Reunioes.renderSetor(idReuniaoAtual, idSetorAtual);

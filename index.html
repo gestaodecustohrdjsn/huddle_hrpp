@@ -16,9 +16,21 @@
           <p>Gestão local de reuniões, setores, perguntas e pendências</p>
         </div>
 
-        <div class="header-logos">
-          <img src="images/Logo_Hospital.svg" alt="Logo Hospital">
-          <img src="images/Logo_Empresa.svg" alt="Logo Empresa">
+        <div class="header-direita">
+          <button
+            class="btn-icone-config"
+            title="Configurações"
+            aria-label="Configurações"
+            onclick="Huddle.Reunioes.renderConfiguracoesEmBreve()"
+          >
+            ⚙
+          </button>
+
+          <div class="header-logos">
+            <!-- Para deixar o cabeçalho mais clean, apague uma ou ambas as linhas de imagem abaixo. -->
+            <img src="images/Logo_Hospital.svg" alt="Logo Hospital">
+            <img src="images/Logo_Empresa.svg" alt="Logo Empresa">
+          </div>
         </div>
       </div>
     </header>
