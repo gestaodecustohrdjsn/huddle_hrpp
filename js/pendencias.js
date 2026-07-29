@@ -29,6 +29,18 @@ Huddle.Pendencias = {
       .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
   },
 
+  async obterResolvidasRecentes(limite = 8) {
+    const pendencias = await Huddle.DB.getAll("pendencias");
+
+    return pendencias
+      .filter(pendencia =>
+        pendencia.status === "Resolvida" &&
+        pendencia.removida !== true
+      )
+      .sort((a, b) => new Date(b.resolved_at || b.updated_at || 0) - new Date(a.resolved_at || a.updated_at || 0))
+      .slice(0, limite);
+  },
+
   ordenarPendencias(pendencias) {
     return [...pendencias].sort((a, b) => {
       const scoreA = this.scoreCriticidade(a);
@@ -164,6 +176,37 @@ Huddle.Pendencias = {
     `;
   },
 
+  htmlResumoPendenciaResolvida(pendencia) {
+    const textoReuniao = this.formatarTextoReuniao(pendencia);
+    const dataResolucao = pendencia.resolved_at
+      ? Huddle.Utils.dataHoraBR(pendencia.resolved_at)
+      : "Data de resolução não informada";
+    const prorrogacoes = Number(pendencia.prorrogacoes || 0);
+
+    return `
+      <div class="resumo-pendencia resumo-pendencia-resolvida">
+        <div class="resumo-pendencia-pergunta">
+          ${Huddle.Utils.escapeHtml(pendencia.pergunta_texto || "Pergunta não informada")}
+        </div>
+
+        <strong class="resumo-pendencia-descricao">
+          ${Huddle.Utils.escapeHtml(pendencia.descricao || "Sem descrição")}
+        </strong>
+
+        <div class="resumo-pendencia-info">
+          <span><strong>Setor:</strong> ${Huddle.Utils.escapeHtml(pendencia.setor_nome || "Setor não informado")}</span>
+          <span><strong>Reunião:</strong> ${Huddle.Utils.escapeHtml(textoReuniao)}</span>
+        </div>
+
+        <div class="resumo-pendencia-rodape">
+          <span class="status-prazo status-prazo-resolvida">Resolvida</span>
+          <span>${Huddle.Utils.escapeHtml(dataResolucao)}</span>
+          ${prorrogacoes > 0 ? `<span>${prorrogacoes} prorrogação(ões)</span>` : ""}
+        </div>
+      </div>
+    `;
+  },
+
   async htmlPendenciasHome(pendencias) {
     if (!pendencias.length) return "";
 
@@ -288,10 +331,13 @@ Huddle.Pendencias = {
 
   async renderPainelGeral() {
     const abertas = await this.obterTodasAbertas();
-    const enriquecidas = await this.enriquecer(abertas);
+    const resolvidasRecentes = await this.obterResolvidasRecentes(8);
 
-    const htmlLista = enriquecidas.length
-      ? enriquecidas.map(pendencia => `
+    const abertasEnriquecidas = await this.enriquecer(abertas);
+    const resolvidasEnriquecidas = await this.enriquecer(resolvidasRecentes);
+
+    const htmlAbertas = abertasEnriquecidas.length
+      ? abertasEnriquecidas.map(pendencia => `
         <button
           class="pendencia-painel-item pendencia-clicavel"
           onclick="Huddle.Pendencias.abrirDetalhe('${pendencia.id}', '', '__PAINEL__', null)"
@@ -305,6 +351,25 @@ Huddle.Pendencias = {
         </div>
       `;
 
+    const htmlResolvidas = resolvidasEnriquecidas.length
+      ? `
+        <section class="secao-pendencias-resolvidas">
+          <div class="secao-cabecalho secao-cabecalho-limpo">
+            <h2>Últimas pendências resolvidas</h2>
+            <span class="tag tag-resolvida">${resolvidasEnriquecidas.length}</span>
+          </div>
+
+          <div class="lista-painel-pendencias lista-painel-resolvidas">
+            ${resolvidasEnriquecidas.map(pendencia => `
+              <div class="pendencia-painel-item pendencia-resolvida-item">
+                ${this.htmlResumoPendenciaResolvida(pendencia)}
+              </div>
+            `).join("")}
+          </div>
+        </section>
+      `
+      : "";
+
     Huddle.Utils.$("app").innerHTML = `
       <div class="tela">
         <div class="tela-topo">
@@ -316,9 +381,18 @@ Huddle.Pendencias = {
           </div>
         </div>
 
-        <div class="lista-painel-pendencias">
-          ${htmlLista}
-        </div>
+        <section class="secao-pendencias-abertas">
+          <div class="secao-cabecalho secao-cabecalho-limpo">
+            <h2>Pendências abertas</h2>
+            <span class="tag tag-pendencias">${abertasEnriquecidas.length}</span>
+          </div>
+
+          <div class="lista-painel-pendencias">
+            ${htmlAbertas}
+          </div>
+        </section>
+
+        ${htmlResolvidas}
 
         <div class="acoes">
           <button class="btn-secundario" onclick="Huddle.Reunioes.renderHome()">

@@ -52,6 +52,12 @@ Huddle.Reunioes = {
           Iniciar reunião
         </button>
 
+        <div class="acoes-home-secundarias">
+          <button class="btn-claro" onclick="Huddle.Pendencias.renderPainelGeral()">
+            Painel de pendências
+          </button>
+        </div>
+
         ${
           ultimasConcluidas.length
             ? `
