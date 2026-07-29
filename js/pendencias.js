@@ -150,9 +150,10 @@ Huddle.Pendencias = {
     const prazo = this.formatarSituacaoPrazo(pendencia);
     const prorrogacoes = Number(pendencia.prorrogacoes || 0);
     const tagExtra = opcoes.tagExtra || "";
+    const classePrazo = `resumo-pendencia-prazo-${prazo.classe}`;
 
     return `
-      <div class="resumo-pendencia ${opcoes.classeExtra || ""}">
+      <div class="resumo-pendencia ${classePrazo} ${opcoes.classeExtra || ""}">
         <div class="resumo-pendencia-pergunta">
           ${Huddle.Utils.escapeHtml(pendencia.pergunta_texto || "Pergunta não informada")}
         </div>
@@ -174,6 +175,20 @@ Huddle.Pendencias = {
         </div>
       </div>
     `;
+  },
+
+  classePainelPendencia(pendencia) {
+    const prazo = this.formatarSituacaoPrazo(pendencia);
+
+    if (["vencido", "atencao"].includes(prazo.classe)) {
+      return "pendencia-painel-critica";
+    }
+
+    if (prazo.classe === "ok") {
+      return "pendencia-painel-aberta";
+    }
+
+    return "pendencia-painel-neutra";
   },
 
   htmlResumoPendenciaResolvida(pendencia) {
@@ -213,26 +228,23 @@ Huddle.Pendencias = {
     const enriquecidas = await this.enriquecer(pendencias);
 
     return `
-      <details class="bloco-home bloco-pendencias-home" open>
-        <summary>
-          <span>Pendências em aberto</span>
-          <span class="tag tag-pendencias">${enriquecidas.length}</span>
-        </summary>
+      <section class="secao-pendencias-home">
+        <div class="secao-cabecalho secao-cabecalho-limpo">
+          <h2>Pendências em aberto</h2>
 
-        <div class="lista-home-pendencias">
+          <button class="btn-claro" onclick="Huddle.Pendencias.renderPainelGeral()">
+            Painel de Pendências
+          </button>
+        </div>
+
+        <div class="lista-reunioes-resumo lista-pendencias-home-resumo">
           ${enriquecidas.map(pendencia => `
-            <div class="item-home-pendencia">
+            <div class="item-reuniao-resumo item-pendencia-home-resumo ${this.classePainelPendencia(pendencia)}">
               ${this.htmlResumoPendencia(pendencia)}
             </div>
           `).join("")}
         </div>
-
-        <div class="rodape-pendencias-home">
-          <button class="btn-claro" onclick="Huddle.Pendencias.renderPainelGeral()">
-            Abrir painel de pendências
-          </button>
-        </div>
-      </details>
+      </section>
     `;
   },
 
@@ -339,7 +351,7 @@ Huddle.Pendencias = {
     const htmlAbertas = abertasEnriquecidas.length
       ? abertasEnriquecidas.map(pendencia => `
         <button
-          class="pendencia-painel-item pendencia-clicavel"
+          class="pendencia-painel-item pendencia-clicavel ${this.classePainelPendencia(pendencia)}"
           onclick="Huddle.Pendencias.abrirDetalhe('${pendencia.id}', '', '__PAINEL__', null)"
         >
           ${this.htmlResumoPendencia(pendencia)}
@@ -361,7 +373,7 @@ Huddle.Pendencias = {
 
           <div class="lista-painel-pendencias lista-painel-resolvidas">
             ${resolvidasEnriquecidas.map(pendencia => `
-              <div class="pendencia-painel-item pendencia-resolvida-item">
+              <div class="pendencia-painel-item pendencia-resolvida-item pendencia-painel-resolvida">
                 ${this.htmlResumoPendenciaResolvida(pendencia)}
               </div>
             `).join("")}

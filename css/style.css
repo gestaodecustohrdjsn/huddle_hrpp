@@ -1732,3 +1732,154 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* =========================
+   AJUSTES HOME / PAINEL DE PENDÊNCIAS / BACKUP
+========================= */
+
+.secao-pendencias-home {
+  margin-bottom: 24px;
+}
+
+.lista-pendencias-home-resumo {
+  margin-top: 12px;
+}
+
+.item-pendencia-home-resumo {
+  cursor: default;
+}
+
+.item-pendencia-home-resumo:hover {
+  background: white;
+  transform: none;
+}
+
+.item-pendencia-home-resumo .resumo-pendencia-descricao {
+  font-size: 1.05rem;
+}
+
+.item-pendencia-home-resumo.pendencia-painel-critica {
+  border-left: 5px solid #dc2626;
+}
+
+.item-pendencia-home-resumo.pendencia-painel-aberta {
+  border-left: 5px solid #f59e0b;
+}
+
+.item-pendencia-home-resumo.pendencia-painel-neutra {
+  border-left: 5px solid #94a3b8;
+}
+
+.pendencia-painel-item {
+  background: white;
+}
+
+.lista-painel-pendencias .pendencia-painel-item,
+.pendencias-pergunta-vinculadas .pendencia-setor-item {
+  background: white;
+}
+
+.pendencia-painel-aberta {
+  border-color: #f2d48c !important;
+  border-left: 6px solid #f59e0b !important;
+}
+
+.pendencia-painel-aberta:hover {
+  background: #fffaf0;
+}
+
+.pendencia-painel-critica {
+  border-color: #fca5a5 !important;
+  border-left: 6px solid #dc2626 !important;
+}
+
+.pendencia-painel-critica:hover {
+  background: #fff1f2;
+}
+
+.pendencia-painel-critica .resumo-pendencia-descricao {
+  color: #991b1b !important;
+}
+
+.pendencia-painel-neutra {
+  border-color: #cbd5e1 !important;
+  border-left: 6px solid #94a3b8 !important;
+}
+
+.pendencia-painel-neutra:hover {
+  background: #f8fafc;
+}
+
+.pendencia-painel-resolvida {
+  border-color: #86efac !important;
+  border-left: 6px solid #22c55e !important;
+  background: white !important;
+}
+
+.pendencia-painel-resolvida:hover,
+.pendencia-resolvida-item:hover {
+  background: white !important;
+}
+
+.resumo-pendencia-resolvida {
+  background: white !important;
+}
+
+.resumo-pendencia-resolvida .resumo-pendencia-descricao {
+  color: #166534 !important;
+}
+
+.status-prazo-resolvida,
+.tag-resolvida {
+  background: #ffffff !important;
+  border-color: #22c55e !important;
+  color: #166534 !important;
+}
+
+.status-prazo-atencao,
+.status-prazo-vencido {
+  border-color: #f87171;
+  color: #991b1b;
+  background: #fff1f2;
+}
+
+.grid-backup-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.grid-backup-resumo div {
+  border: 1px solid var(--cinza-borda);
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--cinza-2);
+  display: grid;
+  gap: 4px;
+}
+
+.grid-backup-resumo strong {
+  color: var(--azul);
+  font-size: 1.6rem;
+}
+
+.grid-backup-resumo span {
+  color: var(--texto-fraco);
+  font-weight: 700;
+}
+
+.card-backup-local {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 700px) {
+  .secao-pendencias-home .secao-cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .secao-pendencias-home .secao-cabecalho button {
+    width: 100%;
+  }
+}

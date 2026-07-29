@@ -5,6 +5,21 @@ Huddle.DB = {
   versao: 1,
   db: null,
 
+  storesSistema() {
+    return [
+      "meta",
+      "setores",
+      "perguntas",
+      "opcoes_pergunta",
+      "reunioes",
+      "reuniao_setores",
+      "respostas",
+      "pendencias",
+      "pendencia_logs",
+      "logs"
+    ];
+  },
+
   abrir() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.nome, this.versao);
@@ -26,18 +41,7 @@ Huddle.DB = {
   },
 
   criarStores(db) {
-    const stores = [
-      "meta",
-      "setores",
-      "perguntas",
-      "opcoes_pergunta",
-      "reunioes",
-      "reuniao_setores",
-      "respostas",
-      "pendencias",
-      "pendencia_logs",
-      "logs"
-    ];
+    const stores = this.storesSistema();
 
     stores.forEach(nomeStore => {
       if (!db.objectStoreNames.contains(nomeStore)) {
@@ -125,6 +129,55 @@ Huddle.DB = {
       request.onsuccess = () => resolve(true);
       request.onerror = () => reject(request.error);
     });
+  },
+
+  clear(nomeStore) {
+    return new Promise((resolve, reject) => {
+      const store = this.transacao(nomeStore, "readwrite");
+      const request = store.clear();
+
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  async exportarBackup() {
+    const dados = {};
+
+    for (const store of this.storesSistema()) {
+      dados[store] = await this.getAll(store);
+    }
+
+    return {
+      nome: "Huddle HRPP",
+      versao_banco: this.versao,
+      exportado_em: Huddle.Utils.agoraISO(),
+      dados
+    };
+  },
+
+  async importarBackup(backup) {
+    if (!backup || !backup.dados || typeof backup.dados !== "object") {
+      throw new Error("Arquivo de backup inválido.");
+    }
+
+    const stores = this.storesSistema();
+
+    for (const store of stores) {
+      await this.clear(store);
+    }
+
+    for (const store of stores) {
+      const registros = Array.isArray(backup.dados[store]) ? backup.dados[store] : [];
+
+      for (const registro of registros) {
+        if (registro && registro.id) {
+          await this.put(store, registro);
+        }
+      }
+    }
+
+    return true;
   },
 
   async addLog({ id_reuniao = "", tipo = "", acao = "", detalhe = "", usuario = "" }) {

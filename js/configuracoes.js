@@ -38,6 +38,12 @@ Huddle.Configuracoes = {
             <strong>Perguntas</strong>
             <small>${perguntasAtivas} ativa(s)</small>
           </button>
+
+          <button class="card card-configuracao" onclick="Huddle.Configuracoes.renderBackup()">
+            <span class="icone-config-card">💾</span>
+            <strong>Backup local</strong>
+            <small>Exportar ou importar dados</small>
+          </button>
         </div>
 
         <div class="card card-aviso-config">
@@ -500,6 +506,137 @@ Huddle.Configuracoes = {
 
     Huddle.Utils.toast(pergunta.ativo ? "Pergunta ativada." : "Pergunta inativada.");
     await this.renderPerguntas(idSetorRetorno || pergunta.id_setor);
+  },
+
+  async renderBackup() {
+    const stores = Huddle.DB.storesSistema();
+    const totais = {};
+
+    for (const store of stores) {
+      totais[store] = (await Huddle.DB.getAll(store)).length;
+    }
+
+    Huddle.Utils.$("app").innerHTML = `
+      <div class="tela">
+        <div class="tela-topo">
+          <div>
+            <h2>Backup local</h2>
+            <p class="texto-apoio">
+              Exporte uma cópia dos dados deste navegador ou importe um backup em outro dispositivo.
+            </p>
+          </div>
+        </div>
+
+        <div class="card card-backup-local">
+          <h3>Dados neste dispositivo</h3>
+
+          <div class="grid-backup-resumo">
+            <div><strong>${totais.reunioes || 0}</strong><span>Reuniões</span></div>
+            <div><strong>${totais.respostas || 0}</strong><span>Respostas</span></div>
+            <div><strong>${totais.pendencias || 0}</strong><span>Pendências</span></div>
+            <div><strong>${totais.logs || 0}</strong><span>Logs</span></div>
+          </div>
+
+          <p class="texto-apoio">
+            O backup salva reuniões, respostas, pendências, logs, setores, perguntas e configurações cadastradas.
+          </p>
+
+          <input
+            id="arquivo_backup_huddle"
+            type="file"
+            accept="application/json"
+            class="hidden"
+            onchange="Huddle.Configuracoes.importarBackup(event)"
+          >
+
+          <div class="acoes">
+            <button class="btn-principal" onclick="Huddle.Configuracoes.exportarBackup()">
+              Exportar backup
+            </button>
+
+            <button class="btn-claro" onclick="Huddle.Utils.$('arquivo_backup_huddle').click()">
+              Importar backup
+            </button>
+          </div>
+        </div>
+
+        <div class="card card-aviso-config">
+          <h3>Atenção</h3>
+          <p class="texto-apoio sem-margem">
+            Ao importar um backup, os dados atuais deste navegador serão substituídos pelos dados do arquivo escolhido.
+          </p>
+        </div>
+
+        <div class="acoes">
+          <button class="btn-secundario" onclick="Huddle.Configuracoes.renderHome()">
+            Voltar
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  async exportarBackup() {
+    const backup = await Huddle.DB.exportarBackup();
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const agora = new Date();
+    const data = agora.toISOString().slice(0, 10);
+    const hora = agora.toTimeString().slice(0, 5).replace(":", "");
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `huddle_hrpp_backup_${data}_${hora}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    await Huddle.DB.addLog({
+      tipo: "backup",
+      acao: "Backup exportado",
+      detalhe: `Arquivo gerado em ${data} ${hora}.`,
+      usuario: "Configuração"
+    });
+
+    Huddle.Utils.toast("Backup exportado.");
+  },
+
+  importarBackup(event) {
+    const arquivo = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!arquivo) return;
+
+    const confirmar = confirm(
+      "Importar este backup vai substituir os dados atuais deste navegador. Deseja continuar?"
+    );
+
+    if (!confirmar) return;
+
+    const leitor = new FileReader();
+
+    leitor.onload = async () => {
+      try {
+        const backup = JSON.parse(leitor.result);
+        await Huddle.DB.importarBackup(backup);
+        await Huddle.DB.addLog({
+          tipo: "backup",
+          acao: "Backup importado",
+          detalhe: arquivo.name,
+          usuario: "Configuração"
+        });
+
+        Huddle.Utils.toast("Backup importado com sucesso.");
+        await Huddle.Reunioes.renderHome();
+      } catch (erro) {
+        console.error(erro);
+        Huddle.Utils.toast("Não foi possível importar o backup.");
+      }
+    };
+
+    leitor.readAsText(arquivo);
   },
 
   nomeTipo(tipo) {
