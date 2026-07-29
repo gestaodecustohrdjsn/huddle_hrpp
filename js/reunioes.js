@@ -350,6 +350,7 @@ Huddle.Reunioes = {
                 type="text"
                 placeholder="Digite o nome"
                 autocomplete="off"
+                oninput="Huddle.Reunioes.formatarCampoNome(this)"
                 required
               >
             </div>
@@ -377,6 +378,19 @@ Huddle.Reunioes = {
         </form>
       </div>
     `;
+  },
+
+  formatarCampoNome(input) {
+    const inicio = input.selectionStart;
+    const fim = input.selectionEnd;
+
+    input.value = Huddle.Utils.formatarNomeProprio(input.value);
+
+    try {
+      input.setSelectionRange(inicio, fim);
+    } catch (erro) {
+      // Alguns navegadores podem não permitir ajustar o cursor em determinados campos.
+    }
   },
 
   marcarGrupo(grupo, marcado) {
@@ -414,7 +428,9 @@ Huddle.Reunioes = {
   async criarReuniao(event) {
     event.preventDefault();
 
-    const nome = Huddle.Utils.$("responsavel_nome").value.trim();
+    const nome = Huddle.Utils.formatarNomeProprio(
+      Huddle.Utils.$("responsavel_nome").value.trim()
+    );
 
     const setoresSelecionados = Array
       .from(document.querySelectorAll(".check-presenca:checked"))

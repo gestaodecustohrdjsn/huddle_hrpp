@@ -3,7 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema local de Huddle HRPP para reuniões, perguntas, pendências e indicadores.">
+  <meta name="theme-color" content="#0b4776">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Huddle HRPP">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
   <title>Huddle HRPP</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -27,6 +38,15 @@
           </button>
 
           <button
+            class="btn-icone-config btn-icone-home"
+            title="Início"
+            aria-label="Início"
+            onclick="Huddle.Reunioes.renderHome()"
+          >
+            🏠
+          </button>
+
+          <button
             class="btn-icone-config"
             title="Configurações"
             aria-label="Configurações"
@@ -36,9 +56,8 @@
           </button>
 
           <div class="header-logos">
-            <!-- Para deixar o cabeçalho mais clean, apague uma ou ambas as linhas de imagem abaixo. -->
+            <!-- Para deixar o cabeçalho mais clean, apague a linha abaixo. -->
             <img src="images/Logo_Hospital.svg" alt="Logo Hospital">
-            <img src="images/Logo_Empresa.svg" alt="Logo Empresa">
           </div>
         </div>
       </div>

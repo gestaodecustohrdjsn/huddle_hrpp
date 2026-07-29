@@ -1,7 +1,9 @@
-HUDDLE HRPP - versão com Dashboard
+HUDDLE HRPP - Versão Local / PWA
 
-Estrutura:
+Estrutura principal:
 - index.html
+- manifest.json
+- sw.js
 - css/style.css
 - js/utils.js
 - js/db.js
@@ -13,22 +15,25 @@ Estrutura:
 - js/reunioes.js
 - js/main.js
 - images/Logo_Hospital.svg
-- images/Logo_Empresa.svg
+- images/icon-192.png
+- images/icon-512.png
+- images/icon-maskable-192.png
+- images/icon-maskable-512.png
 
-Principais recursos desta versão:
-- Fluxo local de reuniões no IndexedDB.
-- Setores presentes com Coordenador/Representante.
-- Perguntas por setor com observação em qualquer resposta.
-- Pendências acumulativas, prorrogação, resolução e remoção sem resolver.
-- Painel geral de pendências com abertas e últimas resolvidas.
-- Configurações de setores, perguntas e opções.
-- Backup local em JSON.
-- Dashboard gerencial com indicadores de reuniões, conformidade, não conformidades, pendências e engajamento por setor.
-
-Como testar localmente:
+Como testar no Codespace/local:
 python -m http.server 8000
 
 Depois abra a porta 8000 no navegador.
 
-Observação:
-Os dados ficam salvos no navegador/dispositivo usado. Use o backup local para exportar/importar dados entre dispositivos ou antes de limpar o navegador.
+Como instalar no tablet Android:
+1. Publique no GitHub Pages.
+2. Abra o link no Chrome do tablet.
+3. Toque no menu de três pontos.
+4. Escolha "Instalar app" ou "Adicionar à tela inicial".
+5. Abra pelo ícone Huddle HRPP criado na tela inicial.
+
+Observações importantes:
+- O sistema salva os dados no IndexedDB do navegador/dispositivo.
+- O PWA melhora a instalação e o uso offline, mas não sincroniza dados entre dispositivos.
+- Use Exportar/Importar backup nas configurações para levar dados de um dispositivo a outro.
+- Para deixar o cabeçalho mais clean, remova a linha da logo em index.html dentro de .header-logos.

@@ -54,6 +54,14 @@ Huddle.Utils = {
       .replaceAll("'", "&#039;");
   },
 
+  formatarNomeProprio(valor) {
+    return String(valor ?? "")
+      .toLocaleLowerCase("pt-BR")
+      .replace(/(^|\s)(\S)/g, (trecho, espaco, letra) => {
+        return espaco + letra.toLocaleUpperCase("pt-BR");
+      });
+  },
+
   toast(mensagem, tempo = 2800) {
     const toast = document.getElementById("toast");
 
