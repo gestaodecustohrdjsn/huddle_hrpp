@@ -1067,3 +1067,325 @@ button:disabled {
     padding: 18px;
   }
 }
+
+/* =========================
+   HOME LIMPA / NOVO FLUXO
+========================= */
+
+.tela-home {
+  display: grid;
+  gap: 22px;
+}
+
+.home-topo-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: -4px;
+}
+
+.btn-icone-config {
+  width: 46px;
+  height: 46px;
+  min-height: 46px;
+  border-radius: 999px;
+  padding: 0;
+  background: white;
+  color: var(--azul);
+  border: 1px solid var(--cinza-borda);
+  font-size: 1.25rem;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.btn-icone-config:hover {
+  background: var(--cinza-2);
+}
+
+.bloco-home {
+  width: 100%;
+  background: white;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.bloco-home-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.bloco-home-topo h2 {
+  margin: 0;
+}
+
+.bloco-pendencias-home {
+  border-left: 6px solid var(--amarelo);
+  padding: 0;
+  overflow: hidden;
+}
+
+.bloco-pendencias-home summary,
+.card-pendencias-durante-perguntas summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  color: var(--azul);
+  font-weight: 900;
+}
+
+.bloco-pendencias-home summary::-webkit-details-marker,
+.card-pendencias-durante-perguntas summary::-webkit-details-marker {
+  display: none;
+}
+
+.lista-home-pendencias {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--cinza-borda);
+}
+
+.item-home-pendencia {
+  padding: 14px 18px;
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--cinza-borda);
+  background: white;
+}
+
+.item-home-pendencia:last-child {
+  border-bottom: none;
+}
+
+.item-home-pendencia strong {
+  color: #7c4a03;
+}
+
+.item-home-pendencia span,
+.item-home-pendencia small {
+  color: var(--texto-fraco);
+  line-height: 1.35;
+}
+
+.bloco-reuniao-andamento {
+  border-left: 6px solid var(--turquesa);
+}
+
+.info-reuniao-sem-margem {
+  margin-bottom: 0;
+}
+
+.acoes-home-andamento {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.btn-iniciar-home {
+  min-height: 66px;
+  font-size: 1.16rem;
+}
+
+.btn-remover {
+  background: #fff1f1;
+  color: #a13737;
+  border: 1px solid #ffd0d0;
+}
+
+.btn-remover:hover {
+  background: #ffe4e4;
+}
+
+.secao-cabecalho-limpo {
+  align-items: center;
+}
+
+.secao-cabecalho-limpo h2 {
+  margin: 0;
+}
+
+.sem-margem {
+  margin: 0 !important;
+}
+
+/* =========================
+   DETALHE DE REUNIÃO / PENDÊNCIAS GERADAS
+========================= */
+
+.card-pendencias-reuniao {
+  border-left: 6px solid var(--amarelo);
+  margin-bottom: 18px;
+}
+
+.lista-pendencias-geradas {
+  display: grid;
+  gap: 10px;
+}
+
+.item-pendencia-gerada {
+  border: 1px solid #f2d48c;
+  background: #fffaf0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 5px;
+}
+
+.item-pendencia-gerada strong {
+  color: #7c4a03;
+}
+
+.item-pendencia-gerada span,
+.item-pendencia-gerada small {
+  color: var(--texto-fraco);
+  line-height: 1.35;
+}
+
+.resposta-detalhe-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tag-gerou-pendencia {
+  border-color: #f0c56e;
+  color: #8a4f00;
+  background: #fffaf0;
+}
+
+/* =========================
+   AÇÕES DAS PENDÊNCIAS
+========================= */
+
+.pendencia-clicavel {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pendencia-clicavel:hover {
+  background: #fff3d6;
+  transform: none;
+}
+
+.card-pendencias-durante-perguntas {
+  padding: 0;
+  margin-bottom: 16px;
+  border-left: 6px solid var(--amarelo);
+  overflow: hidden;
+}
+
+.conteudo-pendencias-durante-perguntas {
+  border-top: 1px solid var(--cinza-borda);
+  padding: 14px 16px 16px;
+}
+
+.modal-pendencia-card-grande {
+  width: min(760px, 100%);
+}
+
+.detalhe-pendencia-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.detalhe-pendencia-bloco {
+  border: 1px solid var(--cinza-borda);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--cinza-2);
+  display: grid;
+  gap: 5px;
+}
+
+.detalhe-pendencia-bloco.destaque {
+  border-color: #f2d48c;
+  background: #fffaf0;
+}
+
+.detalhe-pendencia-bloco span {
+  color: var(--texto-fraco);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detalhe-pendencia-bloco strong {
+  color: var(--texto);
+  line-height: 1.45;
+}
+
+.form-prorrogar-pendencia {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #f2d48c;
+  border-radius: 16px;
+  background: #fffaf0;
+}
+
+.acoes-pendencia {
+  align-items: center;
+}
+
+.btn-remover-discreto {
+  background: transparent;
+  color: #a13737;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: 0.9rem;
+}
+
+.btn-remover-discreto:hover {
+  background: #fff1f1;
+}
+
+@media (max-width: 700px) {
+  .home-topo-acoes,
+  .acoes-home-andamento,
+  .bloco-home-topo,
+  .resposta-detalhe-topo,
+  .acoes-pendencia {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-icone-config {
+    align-self: flex-end;
+  }
+
+  .acoes-home-andamento button,
+  .acoes-pendencia button {
+    width: 100%;
+  }
+}
+
+.pendencia-sem-acao {
+  opacity: 0.94;
+}
+
+.pendencia-setor-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tag-gerada-agora {
+  border-color: #f0c56e;
+  color: #8a4f00;
+  background: #fffaf0;
+}
+
+@media (max-width: 700px) {
+  .pendencia-setor-topo {
+    flex-direction: column;
+  }
+}
