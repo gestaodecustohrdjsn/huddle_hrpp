@@ -1,4 +1,4 @@
-const CACHE_NAME = "huddle-hrpp-pwa-v1";
+const CACHE_NAME = "huddle-hrpp-pwa-v2-config-padrao";
 
 const APP_ASSETS = [
   "./",

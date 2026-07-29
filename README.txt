@@ -37,3 +37,10 @@ Observações importantes:
 - O PWA melhora a instalação e o uso offline, mas não sincroniza dados entre dispositivos.
 - Use Exportar/Importar backup nas configurações para levar dados de um dispositivo a outro.
 - Para deixar o cabeçalho mais clean, remova a linha da logo em index.html dentro de .header-logos.
+
+ATUALIZAÇÃO - CONFIGURAÇÃO PADRÃO
+---------------------------------
+Esta versão usa como padrão a configuração exportada em 29/07/2026, mantendo apenas setores ativos e removendo do padrão os setores inativados.
+Setores removidos do padrão: Unidade de Internação Clínica Médica, Unidade de Internação Pediatria, UTI B e Hemodinâmica.
+
+Observação: se o navegador/tablet já possui dados salvos no IndexedDB, o sistema mantém a configuração local para não sobrescrever alterações feitas em produção. Para aplicar a configuração padrão em um dispositivo já usado, limpe os dados do site/app ou importe o backup desejado pela tela de Configurações > Backup local.
